@@ -155,6 +155,13 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
     margin-left: 10px;
 }
 
+.highlight {
+    background-color: #f4d03f;  /* Bright yellow highlight */
+    transition: background-color 0.5s ease-in-out;
+}
+
 #bottom-of-page {
     height: 50px; /* Just to ensure it is visible */
 }
+
+
