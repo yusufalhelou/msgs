@@ -8,9 +8,16 @@ function scrollToMessage() {
         const messageElement = document.getElementById(`message-${hash}`);
         if (messageElement) {
             messageElement.scrollIntoView({ behavior: 'smooth' });
+            // Add highlight class to the message
+            messageElement.classList.add('highlight');
+            // Remove the highlight class after 2 seconds
+            setTimeout(() => {
+                messageElement.classList.remove('highlight');
+            }, 2000); // Adjust the duration as needed
         }
     }
 }
+
 
 async function fetchHtmlContent(pubhtmlUrl) {
     // Add a timestamp to the URL to prevent caching
