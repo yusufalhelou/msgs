@@ -1,6 +1,17 @@
 let isFetching = false;
 let currentData = [];
 
+// Function to scroll to the specific message
+function scrollToMessage() {
+    const hash = window.location.hash.substring(1); // Get the hash without the #
+    if (hash) {
+        const messageElement = document.getElementById(`message-${hash}`);
+        if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
 async function fetchHtmlContent(pubhtmlUrl) {
     // Add a timestamp to the URL to prevent caching
     const urlWithTimestamp = `${pubhtmlUrl}?t=${new Date().getTime()}`;
@@ -64,6 +75,9 @@ function displayMessages(data) {
         chatWrapper.appendChild(shareButton);  // Place share button next to the chat bubble
         chatContainer.appendChild(chatWrapper);
     });
+
+    // Scroll to the message if URL hash is present
+    scrollToMessage();
 }
 
 async function fetchDataAndUpdate() {
