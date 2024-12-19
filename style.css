@@ -35,7 +35,7 @@ button:hover {
 iframe {
     width: 80%;
     height: 300px;
-        text-align: center;
+    text-align: center;
     border: none;
     margin-bottom: 20px;
     margin-left: 10%;
@@ -86,4 +86,26 @@ iframe {
     color: #555;
     text-align: right;
     margin-top: 5px;
+}
+
+.scroll-button {
+    padding: 10px 20px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #213d53;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.scroll-button:hover {
+    background-color: #213d53;
+}
+
+#bottom-of-page {
+    height: 50px; /* Just to ensure it is visible */
 }
