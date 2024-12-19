@@ -32,6 +32,7 @@ function displayMessages(data) {
     data.forEach((entry, index) => {
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
+        chatBubble.id = `message-${index + 1}`;  // Add unique ID
         
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
@@ -59,6 +60,7 @@ function displayMessages(data) {
         chatContainer.appendChild(chatBubble);
     });
 }
+
 
 async function fetchDataAndUpdate() {
     if (isFetching) return;
@@ -116,3 +118,5 @@ async function shareChatBubble(chatBubble, referenceNumber) {
     link.target = '_blank';
     link.click();
 }
+
+
