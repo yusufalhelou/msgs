@@ -153,8 +153,13 @@ async function shareChatBubble(chatWrapper, messageId) {
     shareButton.style.display = 'block';  // Show share button again
 
     const urlWithoutHash = window.location.href.split('#')[0];
-    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}&text=Check out this message!`;
-    
+    const fullMessageText = chatWrapper.querySelector('.message').textContent;
+    const snippetLength = 100;  // Adjust based on desired snippet size
+    const snippetText = fullMessageText.length > snippetLength ? fullMessageText.substring(0, snippetLength) + '...' : fullMessageText;
+    const shareText = `${snippetText} —  رد هنا!`; // Arabic text and long dash
+
+    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
+
     // Create download button with photo emoji 📸
     const downloadButton = document.createElement('button');
     downloadButton.className = 'emoji-button';
