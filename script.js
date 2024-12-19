@@ -155,22 +155,33 @@ async function shareChatBubble(chatWrapper, messageId) {
     const urlWithoutHash = window.location.href.split('#')[0];
     const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}&text=Check out this message!`;
     
-    // Create download and share links
-    const downloadLink = document.createElement('a');
-    downloadLink.href = imgData;
-    downloadLink.download = `message-${messageId}.png`;
-    downloadLink.textContent = "Download Screenshot";
+    // Create download button with photo emoji 📸
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'emoji-button';
+    downloadButton.innerHTML = '📸';  // Photo emoji
+    downloadButton.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `message-${messageId}.png`;
+        link.click();
+    });
 
-    const link = document.createElement('a');
-    link.href = shareLink;
-    link.target = '_blank';
-    link.textContent = "Share on Twitter";
+    // Create share button with Twitter emoji 🐦
+    const twitterButton = document.createElement('button');
+    twitterButton.className = 'emoji-button';
+    twitterButton.innerHTML = '🐦';  // Twitter emoji
+    twitterButton.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = shareLink;
+        link.target = '_blank';
+        link.click();
+    });
 
     // Display options
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'share-options';  // Add class for styling
-    optionsContainer.appendChild(downloadLink);
-    optionsContainer.appendChild(link);
+    optionsContainer.appendChild(downloadButton);
+    optionsContainer.appendChild(twitterButton);
 
     chatWrapper.appendChild(optionsContainer);
 }
