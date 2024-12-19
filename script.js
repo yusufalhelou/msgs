@@ -91,3 +91,8 @@ document.getElementById('toggleFormButton').addEventListener('click', () => {
         document.getElementById('toggleFormButton').textContent = 'Open Form';
     }
 });
+
+// Add scroll event
+document.getElementById('scrollToBottomButton').addEventListener('click', () => {
+    document.getElementById('bottom-of-page').scrollIntoView({ behavior: 'smooth' });
+});
