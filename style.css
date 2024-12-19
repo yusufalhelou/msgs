@@ -78,6 +78,7 @@ iframe {
     text-align: left;
     max-width: 80%;
     word-wrap: break-word;
+    position: relative; /* Ensure relative positioning */
 }
 
 .timestamp {
@@ -86,6 +87,7 @@ iframe {
     position: absolute;
     top: 10px;
     left: 10px;
+    display: block; /* Ensure it's not hidden */
 }
 
 .message {
