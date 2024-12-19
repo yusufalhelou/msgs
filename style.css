@@ -78,7 +78,11 @@ iframe {
     text-align: left;
     max-width: 80%;
     word-wrap: break-word;
-    position: relative; /* Ensure relative positioning */
+    position: relative;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+
 }
 
 .timestamp {
