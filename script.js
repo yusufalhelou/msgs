@@ -139,7 +139,7 @@ async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';  // Hide share button
 
-// Check if options already exist, remove them if they do
+    // Check if options already exist, remove them if they do
     const existingOptions = chatWrapper.querySelector('.share-options');
     if (existingOptions) {
         chatWrapper.removeChild(existingOptions);
@@ -147,24 +147,51 @@ async function shareChatBubble(chatWrapper, messageId) {
         return;
     }
 
-    // Capture screenshot
+        // Capture screenshot
     const canvas = await html2canvas(chatWrapper);
     const imgData = canvas.toDataURL("image/png");
 
     shareButton.style.display = 'block';  // Show share button again
 
+
+    // Create buttons immediately
     const urlWithoutHash = window.location.href.split('#')[0];
     const fullMessageText = chatWrapper.querySelector('.message').textContent;
     const snippetLength = 100;  // Adjust based on desired snippet size
     const snippetText = fullMessageText.length > snippetLength ? fullMessageText.substring(0, snippetLength) + '...' : fullMessageText;
-    const shareText = `${snippetText} —  رد هنا!`; // Arabic text and long dash
+    const shareText = `${snippetText} —  رد هنا!\n`; // Arabic text and long dash followed by a newline
 
-const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + messageId)}`;
+    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + messageId)}`;
 
     // Create download button with photo emoji 📸
     const downloadButton = document.createElement('button');
     downloadButton.className = 'emoji-button';
     downloadButton.innerHTML = '📸';  // Photo emoji
+
+    // Create share button with Twitter emoji 🐦
+    const twitterButton = document.createElement('button');
+    twitterButton.className = 'emoji-button';
+    twitterButton.innerHTML = '🐦';  // Twitter emoji
+    twitterButton.addEventListener('click', () => {
+        window.open(shareLink, '_blank');
+    });
+
+    // Display options immediately
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'share-options';  // Add class for styling
+    optionsContainer.appendChild(downloadButton);
+    optionsContainer.appendChild(twitterButton);
+
+    chatWrapper.appendChild(optionsContainer);
+
+    // Handle screenshot asynchronously
+    const captureScreenshot = async () => {
+        const canvas = await html2canvas(chatWrapper);
+        const imgData = canvas.toDataURL("image/png");
+        return imgData;
+    };
+
+    const imgData = await captureScreenshot();
     downloadButton.addEventListener('click', () => {
         const link = document.createElement('a');
         link.href = imgData;
@@ -172,22 +199,5 @@ const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(sh
         link.click();
     });
 
-    // Create share button with Twitter emoji 🐦
-    const twitterButton = document.createElement('button');
-    twitterButton.className = 'emoji-button';
-    twitterButton.innerHTML = '🐦';  // Twitter emoji
-    twitterButton.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.href = shareLink;
-        link.target = '_blank';
-        link.click();
-    });
-
-    // Display options
-    const optionsContainer = document.createElement('div');
-    optionsContainer.className = 'share-options';  // Add class for styling
-    optionsContainer.appendChild(downloadButton);
-    optionsContainer.appendChild(twitterButton);
-
-    chatWrapper.appendChild(optionsContainer);
+    shareButton.style.display = 'block';  // Show share button again
 }
