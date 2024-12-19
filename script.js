@@ -35,7 +35,8 @@ function displayMessages(data) {
 
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
-        chatBubble.id = `message-${index + 1}`;  // Add unique ID
+        const messageId = `${index + 1}`; // Numeric ID
+        chatBubble.id = `message-${messageId}`;
         
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
@@ -53,7 +54,7 @@ function displayMessages(data) {
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
-        shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, index + 1));
+        shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
@@ -110,7 +111,7 @@ document.getElementById('scrollToBottomButton').addEventListener('click', () => 
 });
 
 // Function to share chat bubble
-async function shareChatBubble(chatWrapper, referenceNumber) {
+async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';  // Hide share button
 
@@ -129,12 +130,12 @@ async function shareChatBubble(chatWrapper, referenceNumber) {
     shareButton.style.display = 'block';  // Show share button again
 
     const urlWithoutHash = window.location.href.split('#')[0];
-    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(urlWithoutHash + '#' + referenceNumber)}&text=Check out this message!`;
+    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}&text=Check out this message!`;
     
     // Create download and share links
     const downloadLink = document.createElement('a');
     downloadLink.href = imgData;
-    downloadLink.download = `message-${referenceNumber}.png`;
+    downloadLink.download = `message-${messageId}.png`;
     downloadLink.textContent = "Download Screenshot";
 
     const link = document.createElement('a');
