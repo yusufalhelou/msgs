@@ -77,6 +77,7 @@ iframe {
     padding: 15px;
     text-align: left;
     max-width: 80%;
+    min-width: 50%; /* Add a minimum width */
     word-wrap: break-word;
     position: relative;
     margin-bottom: 15px;
@@ -89,6 +90,7 @@ iframe {
     font-size: 0.75em;
     color: #555;
     position: absolute;
+    margin-bottom: 5px; /* Adjust to fit your design */
     top: 10px;
     left: 10px;
     display: block; /* Ensure it's not hidden */
