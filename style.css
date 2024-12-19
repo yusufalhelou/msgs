@@ -160,6 +160,20 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
     transition: background-color 0.5s ease-in-out;
 }
 
+.emoji-button {
+    background: none;
+    border: none;
+    font-size: 1.5em;  /* Adjust size as needed */
+    cursor: pointer;
+    margin-right: 10px;  /* Space between buttons */
+    transition: transform 0.2s;  /* Add a little animation */
+}
+
+.emoji-button:hover {
+    transform: scale(1.2);  /* Scale up the button on hover */
+}
+
+
 #bottom-of-page {
     height: 50px; /* Just to ensure it is visible */
 }
