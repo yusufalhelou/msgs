@@ -18,7 +18,6 @@ function scrollToMessage() {
     }
 }
 
-
 async function fetchHtmlContent(pubhtmlUrl) {
     // Add a timestamp to the URL to prevent caching
     const urlWithTimestamp = `${pubhtmlUrl}?t=${new Date().getTime()}`;
@@ -113,6 +112,9 @@ fetchDataAndUpdate();
 
 // Set interval to refresh data every 10 seconds (10000 milliseconds)
 setInterval(fetchDataAndUpdate, 10000);
+
+// Listen for hash changes to navigate to the specific message
+window.addEventListener('hashchange', scrollToMessage);
 
 // Toggle form visibility
 document.getElementById('toggleFormButton').addEventListener('click', () => {
