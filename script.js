@@ -30,6 +30,9 @@ function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = ''; // Clear existing messages
     data.forEach((entry, index) => {
+        const chatWrapper = document.createElement('div');
+        chatWrapper.className = 'chat-wrapper';  // Add wrapper for styling
+
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
         chatBubble.id = `message-${index + 1}`;  // Add unique ID
@@ -50,17 +53,17 @@ function displayMessages(data) {
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
-        shareButton.addEventListener('click', () => shareChatBubble(chatBubble, index + 1));
+        shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, index + 1));
 
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
-        chatBubble.appendChild(shareButton);
         
-        chatContainer.appendChild(chatBubble);
+        chatWrapper.appendChild(chatBubble);
+        chatWrapper.appendChild(shareButton);  // Place share button next to the chat bubble
+        chatContainer.appendChild(chatWrapper);
     });
 }
-
 
 async function fetchDataAndUpdate() {
     if (isFetching) return;
@@ -107,18 +110,32 @@ document.getElementById('scrollToBottomButton').addEventListener('click', () => 
 });
 
 // Function to share chat bubble
-async function shareChatBubble(chatBubble, referenceNumber) {
-    const canvas = await html2canvas(chatBubble);
+async function shareChatBubble(chatWrapper, referenceNumber) {
+    const shareButton = chatWrapper.querySelector('.share-button');
+    shareButton.style.display = 'none';  // Hide share button
+
+    // Check if options already exist, remove them if they do
+    const existingOptions = chatWrapper.querySelector('.share-options');
+    if (existingOptions) {
+        chatWrapper.removeChild(existingOptions);
+        shareButton.style.display = 'block';
+        return;
+    }
+
+    // Capture screenshot
+    const canvas = await html2canvas(chatWrapper);
     const imgData = canvas.toDataURL("image/png");
 
-    // Create download link
+    shareButton.style.display = 'block';  // Show share button again
+
+    const urlWithoutHash = window.location.href.split('#')[0];
+    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(urlWithoutHash + '#' + referenceNumber)}&text=Check out this message!`;
+    
+    // Create download and share links
     const downloadLink = document.createElement('a');
     downloadLink.href = imgData;
     downloadLink.download = `message-${referenceNumber}.png`;
     downloadLink.textContent = "Download Screenshot";
-
-    // Create share link
-    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href + '#message-' + referenceNumber)}&text=Check out this message!`;
 
     const link = document.createElement('a');
     link.href = shareLink;
@@ -127,11 +144,9 @@ async function shareChatBubble(chatBubble, referenceNumber) {
 
     // Display options
     const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'share-options';  // Add class for styling
     optionsContainer.appendChild(downloadLink);
     optionsContainer.appendChild(link);
 
-    // Append options below chat bubble
-    chatBubble.appendChild(optionsContainer);
+    chatWrapper.appendChild(optionsContainer);
 }
-
-
