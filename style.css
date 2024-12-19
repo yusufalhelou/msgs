@@ -89,22 +89,28 @@ iframe {
 }
 
 .scroll-button {
-    padding: 10px 20px;
+    width: 50px;  /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    padding: 10px;  /* Optional, for inner padding */
     position: fixed;
     bottom: 20px;
     right: 20px;
     background-color: #213d53;
     color: white;
     border: none;
-    border-radius: 50%;
+    border-radius: 50%;  /* Ensures it's a perfect circle */
     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3);
     cursor: pointer;
     z-index: 1000;
+    display: flex;  /* Centering text inside */
+    align-items: center;  /* Centering text inside */
+    justify-content: center;  /* Centering text inside */
 }
 
 .scroll-button:hover {
     background-color: #213d53;
 }
+
 
 #bottom-of-page {
     height: 50px; /* Just to ensure it is visible */
