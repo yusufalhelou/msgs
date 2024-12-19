@@ -29,7 +29,7 @@ function parseHtml(html) {
 function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = ''; // Clear existing messages
-    data.forEach(entry => {
+    data.forEach((entry, index) => {
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
         
@@ -45,9 +45,16 @@ function displayMessages(data) {
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
 
+        // Create share button
+        const shareButton = document.createElement('button');
+        shareButton.className = 'share-button';
+        shareButton.innerHTML = '🔗';
+        shareButton.addEventListener('click', () => shareChatBubble(chatBubble, index + 1));
+
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
+        chatBubble.appendChild(shareButton);
         
         chatContainer.appendChild(chatBubble);
     });
@@ -96,3 +103,16 @@ document.getElementById('toggleFormButton').addEventListener('click', () => {
 document.getElementById('scrollToBottomButton').addEventListener('click', () => {
     document.getElementById('bottom-of-page').scrollIntoView({ behavior: 'smooth' });
 });
+
+// Function to share chat bubble
+async function shareChatBubble(chatBubble, referenceNumber) {
+    const canvas = await html2canvas(chatBubble);
+    const imgData = canvas.toDataURL("image/png");
+
+    const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href + '#message-' + referenceNumber)}&text=Check out this message!`;
+    
+    const link = document.createElement('a');
+    link.href = shareLink;
+    link.target = '_blank';
+    link.click();
+}
