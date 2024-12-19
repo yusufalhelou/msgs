@@ -4,8 +4,9 @@ let currentData = [];
 // Function to scroll to the specific message
 function scrollToMessage() {
     const hash = window.location.hash.substring(1); // Get the hash without the #
-    if (hash) {
-        const messageElement = document.getElementById(`message-${hash}`);
+    const messageId = hash.replace('#', ''); // Ensure the ID is without a hashtag
+    if (messageId) {
+        const messageElement = document.getElementById(`message-${messageId}`);
         if (messageElement) {
             messageElement.scrollIntoView({ behavior: 'smooth' });
             // Add highlight class to the message
@@ -138,7 +139,7 @@ async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';  // Hide share button
 
-    // Check if options already exist, remove them if they do
+// Check if options already exist, remove them if they do
     const existingOptions = chatWrapper.querySelector('.share-options');
     if (existingOptions) {
         chatWrapper.removeChild(existingOptions);
@@ -158,7 +159,7 @@ async function shareChatBubble(chatWrapper, messageId) {
     const snippetText = fullMessageText.length > snippetLength ? fullMessageText.substring(0, snippetLength) + '...' : fullMessageText;
     const shareText = `${snippetText} —  رد هنا!`; // Arabic text and long dash
 
-    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
+const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + messageId)}`;
 
     // Create download button with photo emoji 📸
     const downloadButton = document.createElement('button');
