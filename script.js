@@ -111,12 +111,27 @@ async function shareChatBubble(chatBubble, referenceNumber) {
     const canvas = await html2canvas(chatBubble);
     const imgData = canvas.toDataURL("image/png");
 
+    // Create download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = imgData;
+    downloadLink.download = `message-${referenceNumber}.png`;
+    downloadLink.textContent = "Download Screenshot";
+
+    // Create share link
     const shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href + '#message-' + referenceNumber)}&text=Check out this message!`;
-    
+
     const link = document.createElement('a');
     link.href = shareLink;
     link.target = '_blank';
-    link.click();
+    link.textContent = "Share on Twitter";
+
+    // Display options
+    const optionsContainer = document.createElement('div');
+    optionsContainer.appendChild(downloadLink);
+    optionsContainer.appendChild(link);
+
+    // Append options below chat bubble
+    chatBubble.appendChild(optionsContainer);
 }
 
 
