@@ -66,7 +66,7 @@ iframe {
     align-items: center;
     margin-bottom: 15px;
     background-color: #6b313f;
-    padding: 10px;
+padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
@@ -90,7 +90,7 @@ iframe {
     font-size: 0.75em;
     color: #555;
     position: absolute;
-    margin-bottom: 5px; /* Adjust to fit your design */
+    margin-bottom: 10px; /* Adjust to fit your design */
     top: 10px;
     left: 10px;
     display: block; /* Ensure it's not hidden */
