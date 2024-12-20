@@ -146,9 +146,9 @@ async function shareChatBubble(chatWrapper, messageId) {
         return;
     }
 
-    // Capture screenshot
-    const canvas = await html2canvas(chatWrapper);
-    const imgData = canvas.toDataURL("image/png");
+// Capture screenshot with background color
+const canvas = await html2canvas(chatWrapper, { backgroundColor: '#e4e0d7' });
+const imgData = canvas.toDataURL("image/png");
 
     shareButton.style.display = 'block';  // Show share button again
 
