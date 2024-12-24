@@ -43,14 +43,10 @@ function parseHtml(html) {
     return data;
 }
 
-// Updated function to handle new lines first and then URLs
+// Add this function to detect and convert URLs to links
 function linkify(text) {
-    // Replace newline characters with <br> tags first
-    let newText = text.replace(/\n/g, '<br>');  
-    // Then, replace URLs with clickable links
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    newText = newText.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
-    return newText;
+    return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 }
 
 function displayMessages(data) {
