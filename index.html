@@ -34,8 +34,8 @@
             height: 100px;
             background-image: url('https://static.vecteezy.com/system/resources/thumbnails/039/668/061/small/islamic-lantern-decoration-garland-png.png');
             background-repeat: repeat-x;
-            z-index: 0;
-            animation: floatLanterns 5s linear infinite;
+            z-index: 10;
+            animation: floatLanterns 4s ease-in-out infinite;
         }
         .colorful-paper {
             position: fixed;
@@ -47,9 +47,10 @@
             background-repeat: repeat-x;
             z-index: 0;
         }
-        @keyframes floatLanterns {
-            from { transform: translateY(0); }
-            to { transform: translateY(-20px); }
+       @keyframes floatLanterns {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0); }
         }
     </style>
 </head>
