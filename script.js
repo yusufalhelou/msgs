@@ -54,26 +54,35 @@ function displayMessages(data) {
     chatContainer.innerHTML = ''; // Clear existing messages
     data.forEach((entry, index) => {
         const chatWrapper = document.createElement('div');
-        chatWrapper.className = 'chat-wrapper';  // Add wrapper for styling
+        chatWrapper.className = 'chat-wrapper';
 
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
-        const messageId = `${index + 1}`; // Numeric ID
+        const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
-        
+
+        // Add Christmas lights
+        const lightsString = document.createElement('div');
+        lightsString.className = 'lights-string';
+        for (let i = 0; i < 10; i++) {
+            const light = document.createElement('div');
+            light.className = 'light';
+            lightsString.appendChild(light);
+        }
+        chatBubble.appendChild(lightsString);
+
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
         chatTimestamp.textContent = entry.timestamp;
 
         const chatMessage = document.createElement('div');
         chatMessage.className = 'message';
-        chatMessage.innerHTML = linkify(entry.message); // Use innerHTML and linkify here
+        chatMessage.innerHTML = linkify(entry.message);
 
         const chatSignature = document.createElement('div');
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
 
-        // Create share button
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
@@ -82,9 +91,9 @@ function displayMessages(data) {
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
-        
+
         chatWrapper.appendChild(chatBubble);
-        chatWrapper.appendChild(shareButton);  // Place share button next to the chat bubble
+        chatWrapper.appendChild(shareButton);
         chatContainer.appendChild(chatWrapper);
     });
 
