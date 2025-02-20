@@ -46,11 +46,6 @@ iframe {
     margin-right: 10%;
 }
 
-.sort-container {
-    margin-bottom: 20px;
-    text-align: center;
-}
-
 .chat-container {
     width: 80%;
     max-width: 600px;
@@ -66,9 +61,10 @@ iframe {
     align-items: center;
     margin-bottom: 15px;
     background-color: #6b313f;
-padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
+    padding: 10px 10px 5px 10px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
 }
 
 .chat-bubble {
@@ -77,23 +73,21 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
     padding: 15px;
     text-align: left;
     max-width: 80%;
-    min-width: 40%; /* Add a minimum width */
+    min-width: 40%;
     word-wrap: break-word;
     position: relative;
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-
+    margin: 20px;
+    z-index: 1;
+    overflow: hidden;
 }
 
 .timestamp {
     font-size: 0.75em;
     color: #555;
     position: absolute;
-    margin-bottom: 10px; /* Adjust to fit your design */
     top: 10px;
     left: 10px;
-    display: block; /* Ensure it's not hidden */
+    display: block;
 }
 
 .message {
@@ -111,23 +105,23 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
 }
 
 .scroll-button {
-    width: 50px;  /* Adjust size as needed */
-    height: 50px; /* Adjust size as needed */
-    padding: 10px;  /* Optional, for inner padding */
+    width: 50px;
+    height: 50px;
+    padding: 10px;
     position: fixed;
     bottom: 20px;
     right: 20px;
     background-color: #213d53;
     color: white;
     border: none;
-    border-radius: 50%;  /* Ensures it's a perfect circle */
+    border-radius: 50%;
     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3);
     cursor: pointer;
     z-index: 1000;
-    display: flex;  /* Centering text inside */
-    align-items: center;  /* Centering text inside */
-    justify-content: center;  /* Centering text inside */
-    font-size: 1.5em; /* Increase this value to make the emoji larger */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
 }
 
 .scroll-button:hover {
@@ -141,7 +135,7 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
     border-radius: 5px;
     padding: 5px;
     cursor: pointer;
-    font-size: 1em;  /* Ensures icon/text is visible */
+    font-size: 1em;
 }
 
 .share-button:hover {
@@ -156,25 +150,89 @@ padding: 10px 10px 5px 10px; /* Adjusted padding to be smaller at the bottom */
 }
 
 .highlight {
-    background-color: #f4d03f;  /* Bright yellow highlight */
+    background-color: #f4d03f;
     transition: background-color 0.5s ease-in-out;
 }
 
 .emoji-button {
     background: none;
     border: none;
-    font-size: 1.5em;  /* Adjust size as needed */
+    font-size: 1.5em;
     cursor: pointer;
-    margin-right: 10px;  /* Space between buttons */
-    transition: transform 0.2s;  /* Add a little animation */
+    margin-right: 10px;
+    transition: transform 0.2s;
 }
 
 .emoji-button:hover {
-    transform: scale(1.2);  /* Scale up the button on hover */
+    transform: scale(1.2);
 }
-
 
 #bottom-of-page {
-    height: 50px; /* Just to ensure it is visible */
+    height: 50px;
 }
 
+/* Christmas Lights Styles */
+.lights-string {
+    position: absolute;
+    width: calc(100% + 40px);
+    height: calc(100% + 40px);
+    top: -20px;
+    left: -20px;
+    pointer-events: none;
+}
+
+.light {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    animation: glow 1s ease-in-out infinite alternate;
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+}
+
+/* Light positions */
+.light:nth-child(1) { top: 0; left: 10%; }
+.light:nth-child(2) { top: 0; left: 30%; }
+.light:nth-child(3) { top: 0; left: 50%; }
+.light:nth-child(4) { top: 0; left: 70%; }
+.light:nth-child(5) { top: 0; left: 90%; }
+.light:nth-child(6) { top: 100%; left: 90%; }
+.light:nth-child(7) { top: 100%; left: 70%; }
+.light:nth-child(8) { top: 100%; left: 50%; }
+.light:nth-child(9) { top: 100%; left: 30%; }
+.light:nth-child(10) { top: 100%; left: 10%; }
+
+/* Wire */
+.lights-string::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 5%,
+        #444 5% 95%,
+        transparent 95%
+    );
+}
+
+@keyframes glow {
+    0% { 
+        background: #ff0000;
+        box-shadow: 0 0 10px #ff0000;
+    }
+    33% { 
+        background: #00ff00;
+        box-shadow: 0 0 10px #00ff00;
+    }
+    66% { 
+        background: #ffff00;
+        box-shadow: 0 0 10px #ffff00;
+    }
+    100% { 
+        background: #ff00ff;
+        box-shadow: 0 0 10px #ff00ff;
+    }
+}
