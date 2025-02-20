@@ -56,12 +56,7 @@ function displayMessages(data) {
         const chatWrapper = document.createElement('div');
         chatWrapper.className = 'chat-wrapper';
 
-        const chatBubble = document.createElement('div');
-        chatBubble.className = 'chat-bubble';
-        const messageId = `${index + 1}`;
-        chatBubble.id = `message-${messageId}`;
-
-        // Add Christmas lights
+        // Create lights FIRST
         const lightsString = document.createElement('div');
         lightsString.className = 'lights-string';
         for (let i = 0; i < 10; i++) {
@@ -69,6 +64,13 @@ function displayMessages(data) {
             light.className = 'light';
             lightsString.appendChild(light);
         }
+
+        const chatBubble = document.createElement('div');
+        chatBubble.className = 'chat-bubble';
+        const messageId = `${index + 1}`;
+        chatBubble.id = `message-${messageId}`;
+
+        // Insert lights INSIDE the bubble but BEHIND text
         chatBubble.appendChild(lightsString);
 
         const chatTimestamp = document.createElement('div');
