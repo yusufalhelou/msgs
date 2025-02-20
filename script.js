@@ -61,6 +61,11 @@ function displayMessages(data) {
         const messageId = `${index + 1}`; // Numeric ID
         chatBubble.id = `message-${messageId}`;
 
+        // Add wire
+        const wire = document.createElement('div');
+        wire.className = 'wire';
+        chatBubble.appendChild(wire);
+
         // Add Christmas lights container
         const lightsContainer = document.createElement('div');
         lightsContainer.className = 'lights';
