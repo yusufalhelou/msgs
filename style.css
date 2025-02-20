@@ -83,6 +83,7 @@ iframe {
     margin-bottom: 15px;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* Add this to clip overflowing content */
 }
 
 /* Wire/string for the Christmas lights */
@@ -109,6 +110,7 @@ iframe {
     align-items: center;
     padding: 0 10px; /* Add some padding to the sides */
     z-index: 2; /* Ensure the lights are above the wire */
+    box-sizing: border-box; /* Ensure padding is included in the width */
 }
 
 /* Individual light bulbs */
