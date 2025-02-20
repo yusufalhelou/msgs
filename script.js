@@ -79,9 +79,19 @@ function displayMessages(data) {
         shareButton.innerHTML = '🔗';
         shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
+        // Add the lights string HTML
+        const lightsString = document.createElement('div');
+        lightsString.className = 'lights-string';
+        for (let i = 0; i < 10; i++) {
+            const light = document.createElement('div');
+            light.className = 'light';
+            lightsString.appendChild(light);
+        }
+
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
+        chatBubble.appendChild(lightsString);  // Append lights string to chat bubble
         
         chatWrapper.appendChild(chatBubble);
         chatWrapper.appendChild(shareButton);  // Place share button next to the chat bubble
