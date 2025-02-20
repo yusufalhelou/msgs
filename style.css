@@ -83,12 +83,11 @@ iframe {
     margin-bottom: 15px;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Add this to clip overflowing content */
+    overflow: hidden; /* Clip overflowing content */
 }
 
 /* Wire/string for the Christmas lights */
-.chat-bubble::before {
-    content: '';
+.chat-bubble .wire {
     position: absolute;
     bottom: 10px; /* Position the wire slightly above the bottom */
     left: 0;
