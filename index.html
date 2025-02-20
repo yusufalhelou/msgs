@@ -10,8 +10,53 @@
     <meta http-equiv="Expires" content="0">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+        .decoration {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://example.com/ramadan-decorations.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            z-index: -1;
+            opacity: 0.8;
+        }
+        .lanterns {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background-image: url('https://static.vecteezy.com/system/resources/thumbnails/039/668/061/small/islamic-lantern-decoration-garland-png.png');
+            background-repeat: repeat-x;
+            z-index: 0;
+            animation: floatLanterns 5s linear infinite;
+        }
+        .colorful-paper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background-image: url('https://example.com/ramadan-colorful-paper.png');
+            background-repeat: repeat-x;
+            z-index: 0;
+        }
+        @keyframes floatLanterns {
+            from { transform: translateY(0); }
+            to { transform: translateY(-20px); }
+        }
+    </style>
 </head>
 <body>
+    <div class="decoration"></div>
+    <div class="lanterns"></div>
+    <div class="colorful-paper"></div>
     <h1>✍ ...51 إلى</h1>
     <button id="toggleFormButton">Open Form</button>
     <p class="note">All messages are anonymous. We do not collect any data.</p>
