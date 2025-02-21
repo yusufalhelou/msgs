@@ -128,18 +128,16 @@ async function fetchDataAndUpdate() {
     }
 }
 
-// Initial polling setup
-let refreshInterval = 30000; // 30 seconds
+// Fetch data initially
+fetchDataAndUpdate();
 
-function startPolling() {
-  if (!isPollingActive) return;
-  fetchDataAndUpdate().finally(() => {
-    setTimeout(startPolling, refreshInterval);
-  });
-}
+// Set interval to refresh data every 30 seconds (30000 milliseconds)
+setInterval(fetchDataAndUpdate, 30000);
 
-// Start polling initially
-startPolling();
+
+// Listen for hash changes to navigate to the specific message
+window.addEventListener('hashchange', scrollToMessage);
+
 
 // Toggle form visibility (updated)
 let isPollingActive = true;
@@ -157,8 +155,6 @@ document.getElementById('toggleFormButton').addEventListener('click', () => {
     }
 });
 
-// Listen for hash changes to navigate to the specific message
-window.addEventListener('hashchange', scrollToMessage);
 
 // Add scroll event
 document.getElementById('scrollToBottomButton').addEventListener('click', () => {
