@@ -128,26 +128,37 @@ async function fetchDataAndUpdate() {
     }
 }
 
-// Fetch data initially
-fetchDataAndUpdate();
+// Initial polling setup
+let refreshInterval = 30000; // 30 seconds
 
-// Set interval to refresh data every 10 seconds (10000 milliseconds)
-setInterval(fetchDataAndUpdate, 10000);
+function startPolling() {
+  if (!isPollingActive) return;
+  fetchDataAndUpdate().finally(() => {
+    setTimeout(startPolling, refreshInterval);
+  });
+}
 
-// Listen for hash changes to navigate to the specific message
-window.addEventListener('hashchange', scrollToMessage);
+// Start polling initially
+startPolling();
 
-// Toggle form visibility
+// Toggle form visibility (updated)
+let isPollingActive = true;
 document.getElementById('toggleFormButton').addEventListener('click', () => {
     const formContainer = document.getElementById('formContainer');
     if (formContainer.classList.contains('hidden')) {
         formContainer.classList.remove('hidden');
         document.getElementById('toggleFormButton').textContent = 'Close Form';
+        isPollingActive = false; // Pause polling
     } else {
         formContainer.classList.add('hidden');
         document.getElementById('toggleFormButton').textContent = 'Open Form';
+        isPollingActive = true; // Resume polling
+        startPolling(); // Restart the polling loop
     }
 });
+
+// Listen for hash changes to navigate to the specific message
+window.addEventListener('hashchange', scrollToMessage);
 
 // Add scroll event
 document.getElementById('scrollToBottomButton').addEventListener('click', () => {
