@@ -363,7 +363,7 @@ iframe {
     left: 5vw; /* Adjust this value to move it horizontally */
     width: 40px;
     height: 60px;
-    background-color: #6B313F;
+    background-color: #213d53;
     color: white;
     display: flex;
     align-items: center;
@@ -383,7 +383,7 @@ iframe {
 }
 
 .countdown-button:hover {
-    transform: translateY(5px);
+    transform: scaleY(1.1);
     background-color: #7a3a4a;
     box-shadow: 2px 5px 8px rgba(0,0,0,0.3);
 }
