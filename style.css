@@ -356,13 +356,13 @@ iframe {
     transform: scale(1.05);
 }
 
-/* Bookmark Button */
+//* Bookmark Button */
 .countdown-button {
     position: fixed;
-    top: -15px; /* Start with top portion hidden */
+    top: 0;
     left: 5vw;
     width: 40px;
-    height: 75px; /* Total height (60px visible + 15px hidden) */
+    height: 60px; /* Visible height */
     background-color: #213d53;
     color: white;
     display: flex;
@@ -371,18 +371,21 @@ iframe {
     font-size: 1.5em;
     text-decoration: none;
     z-index: 1000;
-    transition: top 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); /* Elastic effect */
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     
-    /* Bookmark shape - extended to account for hidden portion */
+    /* Bookmark shape */
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%);
     box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     
-    /* Paper-like texture */
-    background-image: linear-gradient(to bottom, #6B313F 0%, #7a3a4a 100%);
-    border: 1px solid #5a2937;
+    /* Blue gradient texture */
+    background-image: linear-gradient(to bottom, #213d53 0%, #2a4d6a 100%);
+    border: 1px solid #1a3247;
+    
+    /* Initial hidden state */
+    transform: translateY(-15px);
 }
 
 .countdown-button:hover {
-    top: 0; /* Reveals the full bookmark */
+    transform: translateY(0);
     box-shadow: 2px 5px 10px rgba(0,0,0,0.3);
 }
