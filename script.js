@@ -34,7 +34,8 @@ function parseHtml(html) {
         return {
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
-            signature: cells[2]?.innerText.trim() || ''
+            signature: cells[2]?.innerText.trim() || '',
+            tag: cells[3]?.innerText.trim() || '' // 4th column for tags
         };
     });
 }
