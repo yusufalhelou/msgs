@@ -87,7 +87,7 @@ function displayMessages(data) {
         // Add signature image if ⚡ is found in the tag column
         if (entry.tag && entry.tag.includes('⚡')) {
             const signatureImg = document.createElement('img');
-            signatureImg.src = 'YusufAlhelou.png';
+            signatureImg.src = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
             signatureImg.className = 'signature-image';
             signatureImg.alt = 'Yusuf Alhelou';
             chatBubble.appendChild(signatureImg);
