@@ -382,7 +382,7 @@ iframe {
     border: 1px solid #1a3247;
     
     /* Initial hidden state */
-    transform: translateY(-15px);
+    transform: translateY(-12px);
 }
 
 .countdown-button:hover {
