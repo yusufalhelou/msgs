@@ -392,10 +392,25 @@ iframe {
 
 .signature-image {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    width: 100px; /* Adjust as needed */
+    bottom: 0px;
+    left: 0px;
+    width: 80px; /* Adjust as needed */
     height: auto;
-    opacity: 0.8;
-    z-index: 1;
+    opacity: 1;
+    z-index: 999;
+
+   /* Key fix - remove background/border that creates square */
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    
+    /* Enhanced visibility for transparent PNG */
+    filter: 
+        drop-shadow(0 1px 1px rgb(255 255 255)) /* Blue shadow matching your theme */
+        drop-shadow(0 2px 1px rgb(255 201 82)); /* Red shadow matching your theme */
+    
+    /* Ink-like effect */
+    mix-blend-mode: multiply;
+   
 }
