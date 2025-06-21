@@ -389,3 +389,13 @@ iframe {
     transform: translateY(-2px);
     box-shadow: 2px 5px 10px rgba(0,0,0,0.3);
 }
+
+.signature-image {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: 100px; /* Adjust as needed */
+    height: auto;
+    opacity: 0.8;
+    z-index: 1;
+}
