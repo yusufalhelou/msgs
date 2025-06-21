@@ -56,6 +56,7 @@ function displayMessages(data) {
         const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
+        // Add wire and lights decoration
         const wire = document.createElement('div');
         wire.className = 'wire';
         chatBubble.appendChild(wire);
@@ -69,6 +70,7 @@ function displayMessages(data) {
         }
         chatBubble.appendChild(lightsContainer);
 
+        // Create message elements
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
         chatTimestamp.textContent = entry.timestamp;
@@ -81,11 +83,22 @@ function displayMessages(data) {
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
 
+        // Add signature image if ⚡ is found in the tag column
+        if (entry.tag && entry.tag.includes('⚡')) {
+            const signatureImg = document.createElement('img');
+            signatureImg.src = 'YusufAlhelou.png';
+            signatureImg.className = 'signature-image';
+            signatureImg.alt = 'Yusuf Alhelou';
+            chatBubble.appendChild(signatureImg);
+        }
+
+        // Create share button
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
         shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
+        // Append all elements
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
