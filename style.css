@@ -417,6 +417,20 @@ iframe {
 
 }
 
+.signature-container {
+    position: relative;
+    height: 0; /* Takes no space by default */
+}
+
+.chat-bubble:has(.signature-container img) {
+    position: relative;
+    overflow: visible; /* Allow signature to show outside */
+}
+
+.chat-bubble:has(.signature-container img[style*="block"]) {
+    margin-bottom: 30px; /* Only add space when image is visible */
+}
+
 .filter-container {
     display: flex;
     gap: 10px;
