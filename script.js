@@ -100,13 +100,23 @@ function displayMessages(data) {
         chatSignature.textContent = `- ${entry.signature}`;
 
         // Add signature image if ⚡ is found in the tag column
-        if (entry.tag && entry.tag.includes('⚡')) {
-            const signatureImg = document.createElement('img');
-            signatureImg.src = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
-            signatureImg.className = 'signature-image';
-            signatureImg.alt = 'Yusuf Alhelou';
-            chatBubble.appendChild(signatureImg);
-        }
+      if (entry.tag && entry.tag.includes('⚡')) {
+    const signatureImg = document.createElement('img');
+    signatureImg.src = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
+    signatureImg.className = 'signature-image';
+    signatureImg.alt = 'Yusuf Alhelou';
+    
+    // Only make visible and position for signed messages
+    signatureImg.style.display = 'block';
+    
+    // Create a container for proper layout control
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'signature-container';
+    imgContainer.appendChild(signatureImg);
+    
+    chatBubble.appendChild(imgContainer);
+}
+
 
         // Create share button
         const shareButton = document.createElement('button');
