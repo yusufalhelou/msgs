@@ -413,6 +413,8 @@ iframe {
     /* Ink-like effect */
     mix-blend-mode: multiply;
    
+    display: none; /* Only this line is new */
+
 }
 
 .filter-container {
