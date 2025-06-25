@@ -128,14 +128,6 @@ function displayMessages(data) {
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
 
-// Inside your message creation loop, after creating chatBubble:
-if (entry.tag?.includes('📌')) {
-    const pin = document.createElement('div');
-    pin.className = 'pin-indicator';
-    pin.textContent = '📌';
-    chatBubble.appendChild(pin);
-}
-
         // Add signature image if ⚡ is found in the tag column
      if (entry.tag?.includes('⚡') && base64Signature) {
     const signatureImg = document.createElement('img');
@@ -145,18 +137,6 @@ if (entry.tag?.includes('📌')) {
     signatureImg.alt = 'Yusuf Alhelou';
     chatBubble.appendChild(signatureImg);
 }
-    
-    // Only make visible and position for signed messages
-    signatureImg.style.display = 'block';
-    
-    // Create a container for proper layout control
-    const imgContainer = document.createElement('div');
-    imgContainer.className = 'signature-container';
-    imgContainer.appendChild(signatureImg);
-    
-    chatBubble.appendChild(imgContainer);
-}
-
 
         // Create share button
         const shareButton = document.createElement('button');
