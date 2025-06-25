@@ -33,8 +33,18 @@ function scrollToMessage() {
         if (messageElement) {
             messageElement.scrollIntoView({ behavior: 'smooth' });
             messageElement.classList.add('highlight');
+            
+            // Highlight all replies to this message
+            const replyLinks = document.querySelectorAll(`.reply-link[href="#${hash}"]`);
+            replyLinks.forEach(link => {
+                link.parentElement.parentElement.classList.add('highlight');
+            });
+            
             setTimeout(() => {
                 messageElement.classList.remove('highlight');
+                replyLinks.forEach(link => {
+                    link.parentElement.parentElement.classList.remove('highlight');
+                });
             }, 2000);
         }
     }
@@ -67,6 +77,40 @@ function linkify(text) {
     return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 }
 
+// near other utility functions
+function extractMessageIdFromText(text) {
+    const urlMatch = text.match(/https?:\/\/51pharmd\.github\.io\/msgs\/#(\d+)/i);
+    return urlMatch ? urlMatch[1] : null;
+}
+
+function createReplyBadge(messageId) {
+    const badge = document.createElement('span');
+    badge.className = 'reply-badge';
+    badge.textContent = `→ #${messageId}`;
+    badge.addEventListener('click', () => {
+        window.location.hash = messageId;
+        scrollToMessage();
+    });
+    return badge;
+}
+
+function groupReplies(messages) {
+    const replyMap = {};
+    
+    // First pass: Identify all replies
+    messages.forEach((msg, index) => {
+        const replyToId = extractMessageIdFromText(msg.message);
+        if (replyToId) {
+            if (!replyMap[replyToId]) {
+                replyMap[replyToId] = [];
+            }
+            replyMap[replyToId].push(index);
+        }
+    });
+
+    return replyMap;
+}
+
 // Added filter function
 function filterMessages(data) {
     if (currentFilter === 'all') {
@@ -81,9 +125,9 @@ function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = '';
     
-    // Apply current filter
     const filteredData = filterMessages(data);
-    
+    const replyMap = groupReplies(filteredData);
+
     filteredData.forEach((entry, index) => {
         const chatWrapper = document.createElement('div');
         chatWrapper.className = 'chat-wrapper';
@@ -93,6 +137,42 @@ function displayMessages(data) {
         const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
+        // Add reply badge if this message has replies
+        if (replyMap[index + 1]) { // +1 because your IDs start at 1
+            const replyBadge = document.createElement('div');
+            replyBadge.className = 'reply-badge';
+            replyBadge.textContent = `${replyMap[index + 1].length} replies`;
+            replyBadge.addEventListener('click', () => {
+                // Highlight all replies
+                replyMap[index + 1].forEach(replyIndex => {
+                    const replyElement = document.getElementById(`message-${replyIndex + 1}`);
+                    if (replyElement) {
+                        replyElement.classList.add('highlight');
+                        setTimeout(() => {
+                            replyElement.classList.remove('highlight');
+                        }, 2000);
+                    }
+                });
+            });
+            chatSignature.appendChild(replyBadge);
+        }
+
+        // Add reply link to message text
+        const replyToId = extractMessageIdFromText(entry.message);
+        if (replyToId) {
+            const replyLink = document.createElement('span');
+            replyLink.className = 'reply-link';
+            replyLink.textContent = '↩ Replying to #' + replyToId;
+            replyLink.addEventListener('click', () => {
+                window.location.hash = replyToId;
+                scrollToMessage();
+            });
+            
+            // Insert reply link after message text
+            chatMessage.appendChild(document.createElement('br'));
+            chatMessage.appendChild(replyLink);
+        }
+        
 // Pin Indicator
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
