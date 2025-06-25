@@ -72,6 +72,14 @@ function displayMessages(data) {
         const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
+// Pin Indicator
+    if (entry.tag?.includes('📌')) {
+        const pin = document.createElement('div');
+        pin.className = 'pin-indicator';
+        pin.textContent = '📌';
+        chatBubble.appendChild(pin);
+    }
+
         // Add wire and lights decoration
         const wire = document.createElement('div');
         wire.className = 'wire';
@@ -98,6 +106,14 @@ function displayMessages(data) {
         const chatSignature = document.createElement('div');
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
+
+// Inside your message creation loop, after creating chatBubble:
+if (entry.tag?.includes('📌')) {
+    const pin = document.createElement('div');
+    pin.className = 'pin-indicator';
+    pin.textContent = '📌';
+    chatBubble.appendChild(pin);
+}
 
         // Add signature image if ⚡ is found in the tag column
       if (entry.tag && entry.tag.includes('⚡')) {
