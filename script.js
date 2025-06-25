@@ -1,3 +1,24 @@
+// Base64 Image Converter (Run once on load)
+let base64Signature; // Global variable to store the result
+
+async function prepareSignature() {
+    const imgUrl = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
+    try {
+        const response = await fetch(imgUrl);
+        const blob = await response.blob();
+        base64Signature = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error("Failed to load signature:", error);
+    }
+}
+
+// Initialize when page loads
+prepareSignature();
+
 let isFetching = false;
 let currentData = [];
 let isPollingActive = false;
@@ -116,11 +137,14 @@ if (entry.tag?.includes('📌')) {
 }
 
         // Add signature image if ⚡ is found in the tag column
-      if (entry.tag && entry.tag.includes('⚡')) {
+     if (entry.tag?.includes('⚡') && base64Signature) {
     const signatureImg = document.createElement('img');
-    signatureImg.src = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
+    signatureImg.src = base64Signature; // Use preloaded image
     signatureImg.className = 'signature-image';
+    signatureImg.style.display = 'block'; // Force visible
     signatureImg.alt = 'Yusuf Alhelou';
+    chatBubble.appendChild(signatureImg);
+}
     
     // Only make visible and position for signed messages
     signatureImg.style.display = 'block';
