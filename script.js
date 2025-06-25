@@ -137,49 +137,13 @@ function displayMessages(data) {
         const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
-        // Add reply badge if this message has replies
-        if (replyMap[index + 1]) { // +1 because your IDs start at 1
-            const replyBadge = document.createElement('div');
-            replyBadge.className = 'reply-badge';
-            replyBadge.textContent = `${replyMap[index + 1].length} replies`;
-            replyBadge.addEventListener('click', () => {
-                // Highlight all replies
-                replyMap[index + 1].forEach(replyIndex => {
-                    const replyElement = document.getElementById(`message-${replyIndex + 1}`);
-                    if (replyElement) {
-                        replyElement.classList.add('highlight');
-                        setTimeout(() => {
-                            replyElement.classList.remove('highlight');
-                        }, 2000);
-                    }
-                });
-            });
-            chatSignature.appendChild(replyBadge);
+        // Pin Indicator
+        if (entry.tag?.includes('📌')) {
+            const pin = document.createElement('div');
+            pin.className = 'pin-indicator';
+            pin.textContent = '📌';
+            chatBubble.appendChild(pin);
         }
-
-        // Add reply link to message text
-        const replyToId = extractMessageIdFromText(entry.message);
-        if (replyToId) {
-            const replyLink = document.createElement('span');
-            replyLink.className = 'reply-link';
-            replyLink.textContent = '↩ Replying to #' + replyToId;
-            replyLink.addEventListener('click', () => {
-                window.location.hash = replyToId;
-                scrollToMessage();
-            });
-            
-            // Insert reply link after message text
-            chatMessage.appendChild(document.createElement('br'));
-            chatMessage.appendChild(replyLink);
-        }
-        
-// Pin Indicator
-    if (entry.tag?.includes('📌')) {
-        const pin = document.createElement('div');
-        pin.className = 'pin-indicator';
-        pin.textContent = '📌';
-        chatBubble.appendChild(pin);
-    }
 
         // Add wire and lights decoration
         const wire = document.createElement('div');
@@ -208,15 +172,50 @@ function displayMessages(data) {
         chatSignature.className = 'signature';
         chatSignature.textContent = `- ${entry.signature}`;
 
-        // Add signature image if ⚡ is found in the tag column
-     if (entry.tag?.includes('⚡') && base64Signature) {
-    const signatureImg = document.createElement('img');
-    signatureImg.src = base64Signature; // Use preloaded image
-    signatureImg.className = 'signature-image';
-    signatureImg.style.display = 'block'; // Force visible
-    signatureImg.alt = 'Yusuf Alhelou';
-    chatBubble.appendChild(signatureImg);
-}
+        // Add reply badge if this message has replies (MOVED AFTER chatSignature IS CREATED)
+        if (replyMap[index + 1]) {
+            const replyBadge = document.createElement('span'); // Changed from div to span
+            replyBadge.className = 'reply-badge';
+            replyBadge.textContent = `${replyMap[index + 1].length} replies`;
+            replyBadge.addEventListener('click', () => {
+                replyMap[index + 1].forEach(replyIndex => {
+                    const replyElement = document.getElementById(`message-${replyIndex + 1}`);
+                    if (replyElement) {
+                        replyElement.classList.add('highlight');
+                        setTimeout(() => {
+                            replyElement.classList.remove('highlight');
+                        }, 2000);
+                    }
+                });
+            });
+            chatSignature.appendChild(replyBadge);
+        }
+
+        // Add reply link to message text
+        const replyToId = extractMessageIdFromText(entry.message);
+        if (replyToId) {
+            const replyLink = document.createElement('span');
+            replyLink.className = 'reply-link';
+            replyLink.textContent = '↩ Replying to #' + replyToId;
+            replyLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.hash = replyToId;
+                scrollToMessage();
+            });
+            
+            chatMessage.appendChild(document.createElement('br'));
+            chatMessage.appendChild(replyLink);
+        }
+
+        // Add signature image
+        if (entry.tag?.includes('⚡') && base64Signature) {
+            const signatureImg = document.createElement('img');
+            signatureImg.src = base64Signature;
+            signatureImg.className = 'signature-image';
+            signatureImg.style.display = 'block';
+            signatureImg.alt = 'Yusuf Alhelou';
+            chatBubble.appendChild(signatureImg);
+        }
 
         // Create share button
         const shareButton = document.createElement('button');
@@ -224,11 +223,10 @@ function displayMessages(data) {
         shareButton.innerHTML = '🔗';
         shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
-        // Append all elements
+        // Append all elements (IN CORRECT ORDER)
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
-
         chatWrapper.appendChild(chatBubble);
         chatWrapper.appendChild(shareButton);
         chatContainer.appendChild(chatWrapper);
