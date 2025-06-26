@@ -23,9 +23,9 @@ let isFetching = false;
 let currentData = [];
 let isPollingActive = false;
 let pollingInterval = null;
-let currentFilter = 'all';
+let currentFilter = 'all'; // Added filter state
 
-// Improved scrollToMessage with reply expansion
+// Function to scroll to the specific message
 function scrollToMessage() {
     const hash = window.location.hash.substring(1);
     if (!hash) return;
@@ -33,11 +33,11 @@ function scrollToMessage() {
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
         // Expand any collapsed replies
-        const repliesContainer = messageElement.querySelector('.replies-container');
+        const repliesContainer = document.getElementById(`replies-for-${hash}`);
         if (repliesContainer) {
             repliesContainer.classList.add('visible');
-            const toggleIcon = messageElement.querySelector('.reply-toggle');
-            if (toggleIcon) toggleIcon.textContent = '▲';
+            const toggleIcon = messageElement.querySelector('.reply-indicator span:last-child');
+            if (toggleIcon) toggleIcon.innerHTML = '▲';
         }
 
         messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -66,7 +66,7 @@ function parseHtml(html) {
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
             signature: cells[2]?.innerText.trim() || '',
-            tag: cells[3]?.innerText.trim() || ''
+            tag: cells[3]?.innerText.trim() || '' // 4th column for tags
         };
     });
 }
@@ -76,77 +76,95 @@ function linkify(text) {
     return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 }
 
+// Add this near your other utility functions
 function extractMessageIdFromText(text) {
     const urlMatch = text.match(/https?:\/\/51pharmd\.github\.io\/msgs\/#(\d+)/i);
     return urlMatch ? urlMatch[1] : null;
 }
 
-function groupReplies(messages) {
-    const replyMap = {};
-    messages.forEach((msg, index) => {
-        const replyToId = extractMessageIdFromText(msg.message);
-        if (replyToId) {
-            if (!replyMap[replyToId]) replyMap[replyToId] = [];
-            replyMap[replyToId].push(index);
-        }
-    });
-    return replyMap;
-}
-
-function filterMessages(data) {
-    switch(currentFilter) {
-        case 'all': return data;
-        case 'pinned': return data.filter(entry => entry.tag?.includes('📌'));
-        case 'latest': return data.slice(-5).reverse();
-        default: return data;
-    }
-}
-
-function createReplyToggle(replyCount) {
-    const toggle = document.createElement('span');
-    toggle.className = 'reply-toggle';
-    toggle.textContent = '▼';
-    return toggle;
-}
-
-function createReplyBadge(replyCount) {
+function createReplyToggle(replyCount, messageId) {
+    const container = document.createElement('div');
+    container.className = 'reply-indicator';
+    
     const badge = document.createElement('span');
     badge.className = 'reply-badge';
-    badge.textContent = `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
-    return badge;
+    badge.innerHTML = `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+    
+    const icon = document.createElement('span');
+    icon.innerHTML = '▼';
+    icon.style.fontSize = '0.8em';
+    
+    container.appendChild(badge);
+    container.appendChild(icon);
+    
+    // Toggle visibility on click
+    container.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const repliesContainer = document.getElementById(`replies-for-${messageId}`);
+        repliesContainer.classList.toggle('visible');
+        icon.innerHTML = repliesContainer.classList.contains('visible') ? '▲' : '▼';
+    });
+    
+    return container;
 }
 
-function createRepliesContainer() {
+function createRepliesContainer(messageId) {
     const container = document.createElement('div');
+    container.id = `replies-for-${messageId}`;
     container.className = 'replies-container';
     return container;
 }
 
+function groupReplies(messages) {
+    const replyMap = {};
+    
+    // First pass: Identify all replies
+    messages.forEach((msg, index) => {
+        const replyToId = extractMessageIdFromText(msg.message);
+        if (replyToId) {
+            if (!replyMap[replyToId]) {
+                replyMap[replyToId] = [];
+            }
+            replyMap[replyToId].push(index);
+        }
+    });
+
+    return replyMap;
+}
+
+// Added filter function
+function filterMessages(data) {
+    switch(currentFilter) {
+        case 'all':
+            return data;
+        case 'pinned':
+            return data.filter(entry => entry.tag && entry.tag.includes('📌'));
+        case 'latest':
+            return data.slice(-5).reverse(); // Get last 5 and reverse to show newest first
+        default:
+            return data;
+    }
+}
+
+// Modified displayMessages function
 function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = '';
     
     const filteredData = filterMessages(data);
     const replyMap = groupReplies(filteredData);
-    const pinnedCount = data.filter(entry => entry.tag?.includes('📌')).length;
 
-    // Update pinned button if exists
-    const pinnedButton = document.querySelector('[data-filter="pinned"]');
-    if (pinnedButton) {
-        pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
-    }
-
-    // First pass: Create all message elements
+    // Create all messages first
     const messageElements = filteredData.map((entry, index) => {
-        const messageId = index + 1;
         const chatWrapper = document.createElement('div');
         chatWrapper.className = 'chat-wrapper';
 
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
+        const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
-        // Pin indicator
+        // Add pin indicator (only for pinned messages)
         if (entry.tag?.includes('📌')) {
             const pin = document.createElement('div');
             pin.className = 'pin-indicator';
@@ -154,7 +172,7 @@ function displayMessages(data) {
             chatBubble.appendChild(pin);
         }
 
-        // Message decorations
+        // Add wire and lights decoration
         const wire = document.createElement('div');
         wire.className = 'wire';
         chatBubble.appendChild(wire);
@@ -168,7 +186,7 @@ function displayMessages(data) {
         }
         chatBubble.appendChild(lightsContainer);
 
-        // Message content
+        // Create message elements
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
         chatTimestamp.textContent = entry.timestamp;
@@ -186,66 +204,62 @@ function displayMessages(data) {
         if (replyToId) {
             const replyLink = document.createElement('a');
             replyLink.className = 'reply-link';
-            replyLink.textContent = '↩ Replying to #' + replyToId;
+            replyLink.innerHTML = '↩ Replying to #' + replyToId;
             replyLink.href = `#${replyToId}`;
             replyLink.onclick = (e) => {
                 e.preventDefault();
                 window.location.hash = replyToId;
                 scrollToMessage();
             };
+            
             chatMessage.appendChild(document.createElement('br'));
             chatMessage.appendChild(replyLink);
         }
 
-        // Signature image
-        if (entry.tag?.includes('⚡') && base64Signature) {
+        // Add signature image if ⚡️ is found in the tag column
+        if (entry.tag?.includes('⚡️') && base64Signature) {
             const signatureImg = document.createElement('img');
-            signatureImg.src = base64Signature;
+            signatureImg.src = base64Signature; // Use preloaded image
             signatureImg.className = 'signature-image';
-            signatureImg.style.display = 'block';
+            signatureImg.style.display = 'block'; // Force visible
             signatureImg.alt = 'Yusuf Alhelou';
             chatBubble.appendChild(signatureImg);
         }
 
-        // Share button
+        // Create share button
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
         shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
-        // Assemble message
+        // Append all elements (IN CORRECT ORDER)
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
         chatWrapper.appendChild(chatBubble);
         chatWrapper.appendChild(shareButton);
-
+        
         return { element: chatWrapper, id: messageId };
     });
 
-    // Second pass: Organize replies into threads
+    // Second pass: Add reply containers and organize threads
     messageElements.forEach(({ element, id }) => {
         if (replyMap[id]?.length) {
-            const repliesContainer = createRepliesContainer();
-            const replyIndicator = document.createElement('div');
-            replyIndicator.className = 'reply-indicator';
+            const repliesContainer = createRepliesContainer(id);
+            const toggle = createReplyToggle(replyMap[id].length, id);
             
-            replyIndicator.appendChild(createReplyBadge(replyMap[id].length));
-            replyIndicator.appendChild(createReplyToggle(replyMap[id].length));
+            // Find signature element to append toggle
+            const signature = element.querySelector('.signature');
+            signature.appendChild(toggle);
             
-            replyIndicator.addEventListener('click', () => {
-                repliesContainer.classList.toggle('visible');
-                const toggle = replyIndicator.querySelector('.reply-toggle');
-                toggle.textContent = repliesContainer.classList.contains('visible') ? '▲' : '▼';
-            });
-
             // Add replies to container
             replyMap[id].forEach(replyIndex => {
-                repliesContainer.appendChild(messageElements[replyIndex].element);
+                // Ensure the reply element actually exists in messageElements
+                if (messageElements[replyIndex]) {
+                    repliesContainer.appendChild(messageElements[replyIndex].element);
+                }
             });
-
-            // Add to message
-            element.querySelector('.signature').appendChild(replyIndicator);
+            
             element.appendChild(repliesContainer);
         }
         
@@ -254,7 +268,6 @@ function displayMessages(data) {
 
     scrollToMessage();
 }
-
 
 async function fetchDataAndUpdate() {
     if (isFetching || !isPollingActive) return;
