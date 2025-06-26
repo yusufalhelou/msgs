@@ -33,9 +33,9 @@ function scrollToMessage() {
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
         // Expand replies when jumping to a message
-        const repliesContainer = messageElement.querySelector('.replies-container');
-        if (repliesContainer) {
-            repliesContainer.classList.add('visible');
+        const repliesContainer = messageElement.nextElementSibling;
+        if (repliesContainer && repliesContainer.classList.contains('thread')) {
+            repliesContainer.classList.remove('collapsed');
             const toggle = messageElement.querySelector('.reply-toggle');
             if (toggle) toggle.textContent = '▲';
         }
@@ -102,6 +102,119 @@ function filterMessages(data) {
     }
 }
 
+function createMessageElement(entry, messageId, replyMap, isReply = false) {
+    const chatWrapper = document.createElement('div');
+    chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
+    chatWrapper.id = `message-${messageId}`;
+
+    const chatBubble = document.createElement('div');
+    chatBubble.className = 'chat-bubble';
+
+    // Pin indicator
+    if (entry.tag?.includes('📌')) {
+        const pin = document.createElement('div');
+        pin.className = 'pin-indicator';
+        pin.textContent = '📌';
+        chatBubble.appendChild(pin);
+    }
+
+    // Message decorations
+    const wire = document.createElement('div');
+    wire.className = 'wire';
+    chatBubble.appendChild(wire);
+
+    const lightsContainer = document.createElement('div');
+    lightsContainer.className = 'lights';
+    for (let i = 0; i < 8; i++) {
+        const light = document.createElement('div');
+        light.className = 'light';
+        lightsContainer.appendChild(light);
+    }
+    chatBubble.appendChild(lightsContainer);
+
+    // Message content
+    const chatTimestamp = document.createElement('div');
+    chatTimestamp.className = 'timestamp';
+    chatTimestamp.textContent = entry.timestamp;
+
+    const chatMessage = document.createElement('div');
+    chatMessage.className = 'message';
+    chatMessage.innerHTML = linkify(entry.message);
+
+    const chatSignature = document.createElement('div');
+    chatSignature.className = 'signature';
+    chatSignature.textContent = `- ${entry.signature}`;
+
+    // Add reply link if this is a reply
+    const replyToId = extractMessageIdFromText(entry.message);
+    if (replyToId) {
+        const replyLink = document.createElement('a');
+        replyLink.className = 'reply-link';
+        replyLink.innerHTML = '↩ Replying to #' + replyToId;
+        replyLink.href = `#${replyToId}`;
+        replyLink.onclick = (e) => {
+            e.preventDefault();
+            window.location.hash = replyToId;
+            scrollToMessage();
+        };
+        chatMessage.appendChild(document.createElement('br'));
+        chatMessage.appendChild(replyLink);
+    }
+
+    // Add reply toggle if this message has replies
+    if (replyMap[messageId]?.length) {
+        const replyIndicator = document.createElement('div');
+        replyIndicator.className = 'reply-indicator';
+        
+        const replyBadge = document.createElement('span');
+        replyBadge.className = 'reply-badge';
+        replyBadge.textContent = `${replyMap[messageId].length} ${replyMap[messageId].length === 1 ? 'reply' : 'replies'}`;
+        
+        const replyToggle = document.createElement('span');
+        replyToggle.className = 'reply-toggle';
+        replyToggle.textContent = '▼';
+        
+        replyIndicator.appendChild(replyBadge);
+        replyIndicator.appendChild(replyToggle);
+        
+        replyIndicator.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const repliesContainer = chatWrapper.nextElementSibling;
+            if (repliesContainer) {
+                repliesContainer.classList.toggle('collapsed');
+                replyToggle.textContent = repliesContainer.classList.contains('collapsed') ? '▼' : '▲';
+            }
+        });
+        
+        chatSignature.appendChild(replyIndicator);
+    }
+
+    // Signature image
+    if (entry.tag?.includes('⚡') && base64Signature) {
+        const signatureImg = document.createElement('img');
+        signatureImg.src = base64Signature;
+        signatureImg.className = 'signature-image';
+        signatureImg.style.display = 'block';
+        signatureImg.alt = 'Yusuf Alhelou';
+        chatBubble.appendChild(signatureImg);
+    }
+
+    // Share button
+    const shareButton = document.createElement('button');
+    shareButton.className = 'share-button';
+    shareButton.innerHTML = '🔗';
+    shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
+
+    // Assemble message
+    chatBubble.appendChild(chatTimestamp);
+    chatBubble.appendChild(chatMessage);
+    chatBubble.appendChild(chatSignature);
+    chatWrapper.appendChild(chatBubble);
+    chatWrapper.appendChild(shareButton);
+
+    return chatWrapper;
+}
+
 function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = '';
@@ -110,153 +223,64 @@ function displayMessages(data) {
     const replyMap = groupReplies(filteredData);
     const pinnedCount = data.filter(entry => entry.tag?.includes('📌')).length;
 
-    // Update pinned button if exists
+    // Update pinned button
     const pinnedButton = document.querySelector('[data-filter="pinned"]');
     if (pinnedButton) {
         pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
     }
 
-    // First pass: Create all message elements
-    const messageElements = filteredData.map((entry, index) => {
+    // Create all top-level messages (those without replies or not being replies)
+    filteredData.forEach((entry, index) => {
+        const isReply = extractMessageIdFromText(entry.message);
+        const hasReplies = replyMap[index + 1]?.length > 0;
+        
+        // Skip replies in the first pass (they'll be added in the nesting phase)
+        if (isReply && !hasReplies) return;
+        
         const messageId = index + 1;
-        const chatWrapper = document.createElement('div');
-        chatWrapper.className = 'chat-wrapper';
-
-        const chatBubble = document.createElement('div');
-        chatBubble.className = 'chat-bubble';
-        chatBubble.id = `message-${messageId}`;
-
-        // Pin indicator
-        if (entry.tag?.includes('📌')) {
-            const pin = document.createElement('div');
-            pin.className = 'pin-indicator';
-            pin.textContent = '📌';
-            chatBubble.appendChild(pin);
-        }
-
-        // Message decorations
-        const wire = document.createElement('div');
-        wire.className = 'wire';
-        chatBubble.appendChild(wire);
-
-        const lightsContainer = document.createElement('div');
-        lightsContainer.className = 'lights';
-        for (let i = 0; i < 8; i++) {
-            const light = document.createElement('div');
-            light.className = 'light';
-            lightsContainer.appendChild(light);
-        }
-        chatBubble.appendChild(lightsContainer);
-
-        // Message content
-        const chatTimestamp = document.createElement('div');
-        chatTimestamp.className = 'timestamp';
-        chatTimestamp.textContent = entry.timestamp;
-
-        const chatMessage = document.createElement('div');
-        chatMessage.className = 'message';
-        chatMessage.innerHTML = linkify(entry.message);
-
-        const chatSignature = document.createElement('div');
-        chatSignature.className = 'signature';
-        chatSignature.textContent = `- ${entry.signature}`;
-
-        // Add reply link if this is a reply
-        const replyToId = extractMessageIdFromText(entry.message);
-        if (replyToId) {
-            const replyLink = document.createElement('a');
-            replyLink.className = 'reply-link';
-            replyLink.textContent = '↩ Replying to #' + replyToId;
-            replyLink.href = `#${replyToId}`;
-            replyLink.onclick = (e) => {
-                e.preventDefault();
-                window.location.hash = replyToId;
-                scrollToMessage();
-            };
-            chatMessage.appendChild(document.createElement('br'));
-            chatMessage.appendChild(replyLink);
-        }
-
-        // Signature image
-        if (entry.tag?.includes('⚡') && base64Signature) {
-            const signatureImg = document.createElement('img');
-            signatureImg.src = base64Signature;
-            signatureImg.className = 'signature-image';
-            signatureImg.style.display = 'block';
-            signatureImg.alt = 'Yusuf Alhelou';
-            chatBubble.appendChild(signatureImg);
-        }
-
-        // Share button
-        const shareButton = document.createElement('button');
-        shareButton.className = 'share-button';
-        shareButton.innerHTML = '🔗';
-        shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
-
-        // Assemble message
-        chatBubble.appendChild(chatTimestamp);
-        chatBubble.appendChild(chatMessage);
-        chatBubble.appendChild(chatSignature);
-        chatWrapper.appendChild(chatBubble);
-        chatWrapper.appendChild(shareButton);
-
-        return { element: chatWrapper, id: messageId };
-    });
-
-    // Second pass: Organize replies into threads
-    messageElements.forEach(({ element, id }) => {
-        if (replyMap[id]?.length) {
+        const threadContainer = document.createElement('div');
+        if (hasReplies) threadContainer.className = 'thread';
+        
+        const messageElement = createMessageElement(entry, messageId, replyMap);
+        threadContainer.appendChild(messageElement);
+        
+        // Add replies if they exist
+        if (hasReplies) {
             const repliesContainer = document.createElement('div');
-            repliesContainer.className = 'replies-container';
+            repliesContainer.className = 'thread';
             
-            const replyIndicator = document.createElement('div');
-            replyIndicator.className = 'reply-indicator';
-            
-            const replyBadge = document.createElement('span');
-            replyBadge.className = 'reply-badge';
-            replyBadge.textContent = `${replyMap[id].length} ${replyMap[id].length === 1 ? 'reply' : 'replies'}`;
-            
-            const replyToggle = document.createElement('span');
-            replyToggle.className = 'reply-toggle';
-            replyToggle.textContent = '▼';
-            
-            replyIndicator.appendChild(replyBadge);
-            replyIndicator.appendChild(replyToggle);
-            
-            replyIndicator.addEventListener('click', (e) => {
-                e.stopPropagation();
+            replyMap[index + 1].forEach(replyIndex => {
+                const replyEntry = filteredData[replyIndex];
+                const replyId = replyIndex + 1;
+                const replyElement = createMessageElement(replyEntry, replyId, replyMap, true);
+                repliesContainer.appendChild(replyElement);
                 
-                // Toggle visibility
-                repliesContainer.classList.toggle('visible');
-                replyToggle.textContent = repliesContainer.classList.contains('visible') ? '▲' : '▼';
-                
-                // Scroll to first reply if expanding
-                if (repliesContainer.classList.contains('visible') && replyMap[id].length > 0) {
-                    const firstReplyId = replyMap[id][0] + 1;
-                    const firstReplyElement = document.getElementById(`message-${firstReplyId}`);
-                    if (firstReplyElement) {
-                        firstReplyElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        firstReplyElement.classList.add('highlight');
-                        setTimeout(() => firstReplyElement.classList.remove('highlight'), 2000);
-                    }
+                // Recursively add nested replies
+                if (replyMap[replyId]?.length) {
+                    const nestedRepliesContainer = document.createElement('div');
+                    nestedRepliesContainer.className = 'thread';
+                    
+                    replyMap[replyId].forEach(nestedReplyIndex => {
+                        const nestedEntry = filteredData[nestedReplyIndex];
+                        const nestedId = nestedReplyIndex + 1;
+                        nestedRepliesContainer.appendChild(
+                            createMessageElement(nestedEntry, nestedId, replyMap, true)
+                        );
+                    });
+                    
+                    repliesContainer.appendChild(nestedRepliesContainer);
                 }
             });
-
-            // Add replies to container
-            replyMap[id].forEach(replyIndex => {
-                repliesContainer.appendChild(messageElements[replyIndex].element);
-            });
-
-            // Add to message
-            element.querySelector('.signature').appendChild(replyIndicator);
-            element.appendChild(repliesContainer);
+            
+            threadContainer.appendChild(repliesContainer);
         }
         
-        chatContainer.appendChild(element);
+        chatContainer.appendChild(threadContainer);
     });
 
     scrollToMessage();
 }
+
 async function fetchDataAndUpdate() {
     if (isFetching || !isPollingActive) return;
     isFetching = true;
