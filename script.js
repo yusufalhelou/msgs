@@ -23,21 +23,21 @@ let isFetching = false;
 let currentData = [];
 let isPollingActive = false;
 let pollingInterval = null;
-let currentFilter = 'all'; // Added filter state
+let currentFilter = 'all';
 
-// Function to scroll to the specific message
+// Improved scroll function with reply expansion
 function scrollToMessage() {
     const hash = window.location.hash.substring(1);
     if (!hash) return;
 
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
-        // Expand any collapsed replies
-        const repliesContainer = document.getElementById(`replies-for-${hash}`);
+        // Expand replies when jumping to a message
+        const repliesContainer = messageElement.querySelector('.replies-container');
         if (repliesContainer) {
             repliesContainer.classList.add('visible');
-            const toggleIcon = messageElement.querySelector('.reply-indicator span:last-child');
-            if (toggleIcon) toggleIcon.innerHTML = '▲';
+            const toggle = messageElement.querySelector('.reply-toggle');
+            if (toggle) toggle.textContent = '▲';
         }
 
         messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -66,7 +66,7 @@ function parseHtml(html) {
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
             signature: cells[2]?.innerText.trim() || '',
-            tag: cells[3]?.innerText.trim() || '' // 4th column for tags
+            tag: cells[3]?.innerText.trim() || ''
         };
     });
 }
@@ -76,95 +76,57 @@ function linkify(text) {
     return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 }
 
-// Add this near your other utility functions
 function extractMessageIdFromText(text) {
     const urlMatch = text.match(/https?:\/\/51pharmd\.github\.io\/msgs\/#(\d+)/i);
     return urlMatch ? urlMatch[1] : null;
 }
 
-function createReplyToggle(replyCount, messageId) {
-    const container = document.createElement('div');
-    container.className = 'reply-indicator';
-    
-    const badge = document.createElement('span');
-    badge.className = 'reply-badge';
-    badge.innerHTML = `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
-    
-    const icon = document.createElement('span');
-    icon.innerHTML = '▼';
-    icon.style.fontSize = '0.8em';
-    
-    container.appendChild(badge);
-    container.appendChild(icon);
-    
-    // Toggle visibility on click
-    container.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const repliesContainer = document.getElementById(`replies-for-${messageId}`);
-        repliesContainer.classList.toggle('visible');
-        icon.innerHTML = repliesContainer.classList.contains('visible') ? '▲' : '▼';
-    });
-    
-    return container;
-}
-
-function createRepliesContainer(messageId) {
-    const container = document.createElement('div');
-    container.id = `replies-for-${messageId}`;
-    container.className = 'replies-container';
-    return container;
-}
-
 function groupReplies(messages) {
     const replyMap = {};
-    
-    // First pass: Identify all replies
     messages.forEach((msg, index) => {
         const replyToId = extractMessageIdFromText(msg.message);
         if (replyToId) {
-            if (!replyMap[replyToId]) {
-                replyMap[replyToId] = [];
-            }
+            if (!replyMap[replyToId]) replyMap[replyToId] = [];
             replyMap[replyToId].push(index);
         }
     });
-
     return replyMap;
 }
 
-// Added filter function
 function filterMessages(data) {
     switch(currentFilter) {
-        case 'all':
-            return data;
-        case 'pinned':
-            return data.filter(entry => entry.tag && entry.tag.includes('📌'));
-        case 'latest':
-            return data.slice(-5).reverse(); // Get last 5 and reverse to show newest first
-        default:
-            return data;
+        case 'all': return data;
+        case 'pinned': return data.filter(entry => entry.tag?.includes('📌'));
+        case 'latest': return data.slice(-5).reverse();
+        default: return data;
     }
 }
 
-// Modified displayMessages function
 function displayMessages(data) {
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = '';
     
     const filteredData = filterMessages(data);
     const replyMap = groupReplies(filteredData);
+    const pinnedCount = data.filter(entry => entry.tag?.includes('📌')).length;
 
-    // Create all messages first
+    // Update pinned button if exists
+    const pinnedButton = document.querySelector('[data-filter="pinned"]');
+    if (pinnedButton) {
+        pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
+    }
+
+    // First pass: Create all message elements
     const messageElements = filteredData.map((entry, index) => {
+        const messageId = index + 1;
         const chatWrapper = document.createElement('div');
         chatWrapper.className = 'chat-wrapper';
 
         const chatBubble = document.createElement('div');
         chatBubble.className = 'chat-bubble';
-        const messageId = `${index + 1}`;
         chatBubble.id = `message-${messageId}`;
 
-        // Add pin indicator (only for pinned messages)
+        // Pin indicator
         if (entry.tag?.includes('📌')) {
             const pin = document.createElement('div');
             pin.className = 'pin-indicator';
@@ -172,7 +134,7 @@ function displayMessages(data) {
             chatBubble.appendChild(pin);
         }
 
-        // Add wire and lights decoration
+        // Message decorations
         const wire = document.createElement('div');
         wire.className = 'wire';
         chatBubble.appendChild(wire);
@@ -186,7 +148,7 @@ function displayMessages(data) {
         }
         chatBubble.appendChild(lightsContainer);
 
-        // Create message elements
+        // Message content
         const chatTimestamp = document.createElement('div');
         chatTimestamp.className = 'timestamp';
         chatTimestamp.textContent = entry.timestamp;
@@ -204,62 +166,75 @@ function displayMessages(data) {
         if (replyToId) {
             const replyLink = document.createElement('a');
             replyLink.className = 'reply-link';
-            replyLink.innerHTML = '↩ Replying to #' + replyToId;
+            replyLink.textContent = '↩ Replying to #' + replyToId;
             replyLink.href = `#${replyToId}`;
             replyLink.onclick = (e) => {
                 e.preventDefault();
                 window.location.hash = replyToId;
                 scrollToMessage();
             };
-            
             chatMessage.appendChild(document.createElement('br'));
             chatMessage.appendChild(replyLink);
         }
 
-        // Add signature image if ⚡️ is found in the tag column
-        if (entry.tag?.includes('⚡️') && base64Signature) {
+        // Signature image
+        if (entry.tag?.includes('⚡') && base64Signature) {
             const signatureImg = document.createElement('img');
-            signatureImg.src = base64Signature; // Use preloaded image
+            signatureImg.src = base64Signature;
             signatureImg.className = 'signature-image';
-            signatureImg.style.display = 'block'; // Force visible
+            signatureImg.style.display = 'block';
             signatureImg.alt = 'Yusuf Alhelou';
             chatBubble.appendChild(signatureImg);
         }
 
-        // Create share button
+        // Share button
         const shareButton = document.createElement('button');
         shareButton.className = 'share-button';
         shareButton.innerHTML = '🔗';
         shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
 
-        // Append all elements (IN CORRECT ORDER)
+        // Assemble message
         chatBubble.appendChild(chatTimestamp);
         chatBubble.appendChild(chatMessage);
         chatBubble.appendChild(chatSignature);
         chatWrapper.appendChild(chatBubble);
         chatWrapper.appendChild(shareButton);
-        
+
         return { element: chatWrapper, id: messageId };
     });
 
-    // Second pass: Add reply containers and organize threads
+    // Second pass: Organize replies into threads
     messageElements.forEach(({ element, id }) => {
         if (replyMap[id]?.length) {
-            const repliesContainer = createRepliesContainer(id);
-            const toggle = createReplyToggle(replyMap[id].length, id);
+            const repliesContainer = document.createElement('div');
+            repliesContainer.className = 'replies-container';
             
-            // Find signature element to append toggle
-            const signature = element.querySelector('.signature');
-            signature.appendChild(toggle);
+            const replyIndicator = document.createElement('div');
+            replyIndicator.className = 'reply-indicator';
             
+            const replyBadge = document.createElement('span');
+            replyBadge.className = 'reply-badge';
+            replyBadge.textContent = `${replyMap[id].length} ${replyMap[id].length === 1 ? 'reply' : 'replies'}`;
+            
+            const replyToggle = document.createElement('span');
+            replyToggle.className = 'reply-toggle';
+            replyToggle.textContent = '▼';
+            
+            replyIndicator.appendChild(replyBadge);
+            replyIndicator.appendChild(replyToggle);
+            
+            replyIndicator.addEventListener('click', () => {
+                repliesContainer.classList.toggle('visible');
+                replyToggle.textContent = repliesContainer.classList.contains('visible') ? '▲' : '▼';
+            });
+
             // Add replies to container
             replyMap[id].forEach(replyIndex => {
-                // Ensure the reply element actually exists in messageElements
-                if (messageElements[replyIndex]) {
-                    repliesContainer.appendChild(messageElements[replyIndex].element);
-                }
+                repliesContainer.appendChild(messageElements[replyIndex].element);
             });
-            
+
+            // Add to message
+            element.querySelector('.signature').appendChild(replyIndicator);
             element.appendChild(repliesContainer);
         }
         
@@ -293,7 +268,7 @@ async function fetchDataAndUpdate() {
 document.getElementById('loadMessagesBtn').addEventListener('click', function() {
     this.style.display = 'none';
     isPollingActive = true;
-    document.getElementById('filterButtons').classList.remove('hidden'); // Show filter buttons
+    document.getElementById('filterButtons').classList.remove('hidden');
     fetchDataAndUpdate();
     pollingInterval = setInterval(() => {
         if (isPollingActive) {
@@ -305,13 +280,10 @@ document.getElementById('loadMessagesBtn').addEventListener('click', function() 
 // Filter button click handler
 document.querySelectorAll('.filter-button').forEach(button => {
     button.addEventListener('click', function() {
-        // Update active state
         document.querySelectorAll('.filter-button').forEach(btn => {
             btn.classList.remove('active');
         });
         this.classList.add('active');
-        
-        // Set new filter and refresh display
         currentFilter = this.dataset.filter;
         displayMessages(currentData);
     });
@@ -345,31 +317,24 @@ document.getElementById('toggleCloudButton').addEventListener('click', () => {
     const cloudWindow = document.getElementById('cloudWindow');
     const formContainer = document.getElementById('formContainer');
     
-    // Toggle cloud window
     cloudWindow.classList.toggle('hidden');
-    
-    // Update button text
     document.getElementById('toggleCloudButton').textContent = 
         cloudWindow.classList.contains('hidden') ? 'Enter The Cloud' : 'Exit The Cloud';
     
-    // Control polling - ONLY pause when cloud is open
     if (!cloudWindow.classList.contains('hidden')) {
-        // Close form if open
         if (!formContainer.classList.contains('hidden')) {
             formContainer.classList.add('hidden');
             document.getElementById('toggleFormButton').textContent = 'Open Form';
         }
-        // Pause polling
         isPollingActive = false;
     } else {
-        // Only resume polling if it was active before
         if (pollingInterval !== null) {
             isPollingActive = true;
         }
     }
 });
 
-// Other Event Listeners
+// Event Listeners
 window.addEventListener('hashchange', scrollToMessage);
 
 document.getElementById('scrollToBottomButton').addEventListener('click', () => {
