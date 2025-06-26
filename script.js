@@ -102,7 +102,8 @@ function filterMessages(data) {
     }
 }
 
-function createMessageElement(entry, messageId, replyMap, isReply = false) {
+function createMessageElement(entry, index, replyMap, isReply = false) {
+    const messageId = entry.rowNumber; // Use the actual row number instead of array index
     const chatWrapper = document.createElement('div');
     chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
     chatWrapper.id = `message-${messageId}`;
@@ -113,13 +114,13 @@ function createMessageElement(entry, messageId, replyMap, isReply = false) {
     // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
-    messageNumberBadge.innerHTML = `#${messageId}`;
+    messageNumberBadge.textContent = `#${messageId}`;
     messageNumberBadge.title = "Click to copy message link";
     
     // Add click handler to copy message link
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-        const messageUrl = `${window.location.href.split('#')[0]}#${messageId}`;
+    const messageUrl = `${window.location.href.split('#')[0]}#${messageId}`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             // Visual feedback
             const originalText = messageNumberBadge.textContent;
@@ -268,7 +269,7 @@ function displayMessages(data) {
         const threadContainer = document.createElement('div');
         if (hasReplies) threadContainer.className = 'thread';
         
-        const messageElement = createMessageElement(entry, messageId, replyMap);
+const messageElement = createMessageElement(entry, entry.rowNumber, replyMap);
         threadContainer.appendChild(messageElement);
         
         // Add replies if they exist
@@ -415,6 +416,7 @@ async function shareChatBubble(chatWrapper, messageId) {
         shareButton.style.display = 'block';
         return;
     }
+
 
     const canvas = await html2canvas(chatWrapper, { backgroundColor: '#e4e0d7' });
     const imgData = canvas.toDataURL("image/png");
