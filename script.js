@@ -223,9 +223,23 @@ function displayMessages(data) {
             replyIndicator.appendChild(replyBadge);
             replyIndicator.appendChild(replyToggle);
             
-            replyIndicator.addEventListener('click', () => {
+            replyIndicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Toggle visibility
                 repliesContainer.classList.toggle('visible');
                 replyToggle.textContent = repliesContainer.classList.contains('visible') ? '▲' : '▼';
+                
+                // Scroll to first reply if expanding
+                if (repliesContainer.classList.contains('visible') && replyMap[id].length > 0) {
+                    const firstReplyId = replyMap[id][0] + 1;
+                    const firstReplyElement = document.getElementById(`message-${firstReplyId}`);
+                    if (firstReplyElement) {
+                        firstReplyElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        firstReplyElement.classList.add('highlight');
+                        setTimeout(() => firstReplyElement.classList.remove('highlight'), 2000);
+                    }
+                }
             });
 
             // Add replies to container
@@ -243,7 +257,6 @@ function displayMessages(data) {
 
     scrollToMessage();
 }
-
 async function fetchDataAndUpdate() {
     if (isFetching || !isPollingActive) return;
     isFetching = true;
