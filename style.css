@@ -472,13 +472,38 @@ iframe {
     font-weight: bold;
 }
 
-/* Improved reply styling */
+/* Threaded Replies System */
+.thread {
+    position: relative;
+    margin-left: 30px;
+    padding-left: 15px;
+    border-left: 2px solid rgba(107, 49, 63, 0.2);
+}
+
+.thread::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: 0;
+    height: 20px;
+    width: 15px;
+    border-bottom: 2px solid rgba(107, 49, 63, 0.2);
+}
+
+.reply {
+    margin-top: 10px;
+}
+
+.collapsed {
+    display: none;
+}
+
 .reply-indicator {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     margin-left: 8px;
-    font-size: 0.85em;
+    cursor: pointer;
 }
 
 .reply-badge {
@@ -486,13 +511,18 @@ iframe {
     color: #6B313F;
     padding: 2px 8px;
     border-radius: 12px;
-    cursor: pointer;
+    font-size: 0.85em;
     transition: all 0.2s;
 }
 
 .reply-badge:hover {
     background: #6B313F;
     color: white;
+}
+
+.reply-toggle {
+    font-size: 0.9em;
+    color: #6B313F;
 }
 
 .reply-link {
@@ -502,22 +532,9 @@ iframe {
     display: inline-flex;
     align-items: center;
     gap: 3px;
+    margin-left: 5px;
 }
 
 .reply-link:hover {
     text-decoration: underline;
 }
-
-.replies-container {
-    margin-top: 10px;
-    padding-left: 15px;
-    border-left: 2px solid #6B313F;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-
-.replies-container.visible {
-    max-height: 1000px; /* Adjust based on max expected replies */
-}
-
