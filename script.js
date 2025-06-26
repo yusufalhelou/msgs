@@ -334,27 +334,91 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
 
     // Heart button
     const heartButton = document.createElement('button');
-    heartButton.className = 'heart-button';
-    heartButton.innerHTML = `❤️ ${heartCounts[rowNumber] || 0}`;
-    
-    heartButton.addEventListener('click', async () => {
-        if (localStorage.getItem(`hearted_${rowNumber}`)) return;
-        
-        // Optimistic UI update
-        heartButton.innerHTML = `❤️ ${(heartCounts[rowNumber] || 0) + 1}`;
-        heartButton.classList.add('heart-animate');
-        
-        // Send to Google Sheets
-        await sendHeartReaction(rowNumber);
-        
-        // Refresh counts
-        await fetchHeartCounts();
-        
-        setTimeout(() => {
-            heartButton.classList.remove('heart-animate');
-        }, 1000);
-    });
+heartButton.className = 'heart-button';
+const heartCount = heartCounts[rowNumber] || 0;
+const hasHearted = localStorage.getItem(`hearted_${rowNumber}`);
 
+// Create heart icon
+const heartIcon = document.createElement('span');
+heartIcon.innerHTML = '❤️';
+if (hasHearted) {
+    heartButton.classList.add('filled');
+}
+
+// Create count display (only if count > 0)
+if (heartCount > 0 || hasHearted) {
+    const countSpan = document.createElement('span');
+    countSpan.className = 'count';
+    countSpan.textContent = heartCount + (hasHearted ? 1 : 0);
+    heartButton.appendChild(heartIcon);
+    heartButton.appendChild(countSpan);
+} else {
+    heartButton.appendChild(heartIcon);
+}
+
+heartButton.addEventListener('click', async () => {
+    if (localStorage.getItem(`hearted_${rowNumber}`)) return;
+    
+    // Visual feedback
+    heartButton.classList.add('filled');
+    const currentCount = heartCounts[rowNumber] || 0;
+    const newCount = currentCount + 1;
+    
+    // Update count display
+    let countSpan = heartButton.querySelector('.count');
+    if (!countSpan && newCount > 0) {
+        countSpan = document.createElement('span');
+        countSpan.className = 'count';
+        heartButton.appendChild(countSpan);
+    }
+    if (countSpan) {
+        countSpan.textContent = newCount;
+    }
+    
+    // Animation
+    heartButton.style.transform = 'scale(1.2)';
+    setTimeout(() => {
+        heartButton.style.transform = 'scale(1)';
+    }, 300);
+    
+    // Send to Google Sheets
+    await sendHeartReaction(rowNumber);
+    localStorage.setItem(`hearted_${rowNumber}`, 'true');
+    
+    // Refresh counts
+    await fetchHeartCounts();
+});
+
+// Update fetchHeartCounts() to handle the new display logic
+function updateAllHeartButtons() {
+    document.querySelectorAll('.heart-button').forEach(button => {
+        const messageId = button.closest('.chat-wrapper').id.replace('message-', '');
+        const count = heartCounts[messageId] || 0;
+        const hasHearted = localStorage.getItem(`hearted_${messageId}`);
+        
+        // Update heart state
+        if (hasHearted) {
+            button.classList.add('filled');
+        } else {
+            button.classList.remove('filled');
+        }
+        
+        // Update count display
+        let countSpan = button.querySelector('.count');
+        const total = count + (hasHearted ? 1 : 0);
+        
+        if (total > 0) {
+            if (!countSpan) {
+                countSpan = document.createElement('span');
+                countSpan.className = 'count';
+                button.appendChild(countSpan);
+            }
+            countSpan.textContent = total;
+        } else if (countSpan) {
+            button.removeChild(countSpan);
+        }
+    });
+}
     // Assemble message
     chatBubble.appendChild(chatTimestamp);
     chatBubble.appendChild(chatMessage);
