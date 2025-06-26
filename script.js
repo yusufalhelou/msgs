@@ -625,5 +625,5 @@ async function shareChatBubble(chatWrapper, messageId) {
 document.addEventListener('DOMContentLoaded', () => {
     handleHashRouting();
     fetchHeartCounts(); // Load initial heart counts
-    setInterval(fetchHeartCounts, 300000); // Update hearts every 5 minutes
+    setInterval(fetchHeartCounts, 30000); // Update hearts every 5 minutes
 });
