@@ -137,26 +137,39 @@ function filterMessages(data) {
     }
 }
 
- // Hearts
+// Heart Reaction Function
 async function sendHeartReaction(messageId) {
-    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse'; // From step 2
-    const formData = new URLSearchParams();
+    if (localStorage.getItem(`hearted_${messageId}`)) return;
     
-    // These field names come from your form's input names
-    formData.append('entry.253874205', messageId); // Replace with your actual field ID
+    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
+    const formData = new URLSearchParams();
+    formData.append('entry.253874205', messageId);
     
     try {
         await fetch(formUrl, {
             method: 'POST',
-            mode: 'no-cors', // Important for CORS
+            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: formData
         });
+        localStorage.setItem(`hearted_${messageId}`, 'true');
     } catch (error) {
         console.log("Heart recorded offline");
+        // Queue for later submission if offline
+        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
+        pending.push(messageId);
+        localStorage.setItem('pendingHearts', JSON.stringify(pending));
     }
+}
+
+// Process pending hearts when back online
+window.addEventListener('online', () => {
+    const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
+    pending.forEach(msgId => sendHeartReaction(msgId));
+    localStorage.removeItem('pendingHearts');
+});
 
 function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatWrapper = document.createElement('div');
@@ -166,19 +179,16 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
 
-    
     // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
     messageNumberBadge.textContent = `#${rowNumber}`;
     messageNumberBadge.title = "Click to copy message link";
     
-    // Add click handler to copy message link
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
         const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber}`;
         navigator.clipboard.writeText(messageUrl).then(() => {
-            // Visual feedback
             const originalText = messageNumberBadge.textContent;
             messageNumberBadge.textContent = "Copied!";
             messageNumberBadge.classList.add('copied');
@@ -187,14 +197,11 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
                 messageNumberBadge.textContent = originalText;
                 messageNumberBadge.classList.remove('copied');
             }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
         });
     });
 
     chatBubble.appendChild(messageNumberBadge);
 
-   
     // Pin indicator
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
@@ -247,25 +254,25 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     }
 
     // Add reply toggle if this message has replies
-if (replyMap[rowNumber]?.length) {
-    const replyIndicator = document.createElement('div'); // <-- This was missing!
-    replyIndicator.className = 'reply-indicator';
-    replyIndicator.innerHTML = `
-      <span class="reply-badge">
-        💬 ${replyMap[rowNumber].length} ${replyMap[rowNumber].length === 1 ? 'Reply' : 'Replies'} 
-        <span class="reply-toggle">▼</span>
-      </span>
-    `;
-    
-       replyIndicator.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const repliesContainer = chatWrapper.nextElementSibling;
-  if (repliesContainer && repliesContainer.classList.contains('thread')) {
-    repliesContainer.classList.toggle('collapsed');
-    const toggle = replyIndicator.querySelector('.reply-toggle');
-    toggle.textContent = repliesContainer.classList.contains('collapsed') ? '▼' : '▲';
-  }
-});
+    if (replyMap[rowNumber]?.length) {
+        const replyIndicator = document.createElement('div');
+        replyIndicator.className = 'reply-indicator';
+        replyIndicator.innerHTML = `
+            <span class="reply-badge">
+                💬 ${replyMap[rowNumber].length} ${replyMap[rowNumber].length === 1 ? 'Reply' : 'Replies'} 
+                <span class="reply-toggle">▼</span>
+            </span>
+        `;
+        
+        replyIndicator.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const repliesContainer = chatWrapper.nextElementSibling;
+            if (repliesContainer && repliesContainer.classList.contains('thread')) {
+                repliesContainer.classList.toggle('collapsed');
+                const toggle = replyIndicator.querySelector('.reply-toggle');
+                toggle.textContent = repliesContainer.classList.contains('collapsed') ? '▼' : '▲';
+            }
+        });
         
         chatSignature.appendChild(replyIndicator);
     }
@@ -286,12 +293,33 @@ if (replyMap[rowNumber]?.length) {
     shareButton.innerHTML = '🔗';
     shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, rowNumber));
 
+    // Heart button
+    const heartButton = document.createElement('button');
+    heartButton.className = 'heart-button';
+    heartButton.innerHTML = localStorage.getItem(`hearted_${rowNumber}`) ? '❤️ 1' : '❤️ 0';
+    
+    heartButton.addEventListener('click', () => {
+        if (localStorage.getItem(`hearted_${rowNumber}`)) return;
+        
+        // Optimistic UI update
+        heartButton.innerHTML = '❤️ 1';
+        heartButton.classList.add('heart-animate');
+        
+        // Send to Google Sheets
+        sendHeartReaction(rowNumber);
+        
+        setTimeout(() => {
+            heartButton.classList.remove('heart-animate');
+        }, 1000);
+    });
+
     // Assemble message
     chatBubble.appendChild(chatTimestamp);
     chatBubble.appendChild(chatMessage);
     chatBubble.appendChild(chatSignature);
     chatWrapper.appendChild(chatBubble);
     chatWrapper.appendChild(shareButton);
+    chatWrapper.appendChild(heartButton);
 
     return chatWrapper;
 }
