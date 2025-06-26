@@ -586,9 +586,9 @@ iframe {
     100% { transform: scale(1); }
 }
 
-.heart-count {
-    font-size: 0.8em;
-    color: #6B313F;
+
+.heart-button.animated {
+    animation: heartBeat 0.5s;
 }
 
 .heart-button {
@@ -598,15 +598,18 @@ iframe {
     font-size: 1.2em;
     padding: 5px;
     margin-left: 5px;
-    color: #262626; /* Instagram's default heart color */
-    position: relative;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.2s ease;
 }
 
-.heart-button.animated {
-    animation: heartBeat 0.5s;
+.heart-button .heart-icon {
+    font-size: 1.2em;
+    color: #ffffff;
+    transition: all 0.2s ease;
 }
 
-.heart-button.filled {
+.heart-button.filled .heart-icon {
     color: transparent;
     background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
     background-clip: text;
@@ -616,6 +619,11 @@ iframe {
 .heart-button .count {
     font-size: 0.8em;
     margin-left: 3px;
-    color: #262626;
+    color: #ffffff;
     font-family: sans-serif;
 }
+
+.heart-button:hover {
+    transform: scale(1.1);
+}
+
