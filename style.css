@@ -472,32 +472,52 @@ iframe {
     font-weight: bold;
 }
 
-/* Style for reply links */
-.reply-link {
-    color: #6B313F;
-    text-decoration: underline;
-    cursor: pointer;
-    font-weight: bold;
-    margin-left: 5px;
-}
-
-.reply-link:hover {
-    color: #213d53;
-}
-
-/* Style for reply container */
-.replies-container {
-    margin-top: 8px;
-    padding-left: 20px;
-    border-left: 2px solid #6B313F;
+/* Improved reply styling */
+.reply-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    font-size: 0.85em;
 }
 
 .reply-badge {
-    background-color: #fee4cf;
+    background: #fee4cf;
     color: #6B313F;
-    padding: 2px 6px;
+    padding: 2px 8px;
     border-radius: 12px;
-    font-size: 0.8em;
-    margin-left: 5px;
-    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s;
 }
+
+.reply-badge:hover {
+    background: #6B313F;
+    color: white;
+}
+
+.reply-link {
+    color: #6B313F;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.reply-link:hover {
+    text-decoration: underline;
+}
+
+.replies-container {
+    margin-top: 10px;
+    padding-left: 15px;
+    border-left: 2px solid #6B313F;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.replies-container.visible {
+    max-height: 1000px; /* Adjust based on max expected replies */
+}
+
