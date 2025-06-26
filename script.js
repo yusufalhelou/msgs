@@ -25,10 +25,38 @@ let isPollingActive = false;
 let pollingInterval = null;
 let currentFilter = 'all';
 
+// Handle hash-based routing
+function handleHashRouting() {
+    const hash = window.location.hash.substring(1);
+    
+    // Check if hash is a message ID (numbers only)
+    if (/^\d+$/.test(hash)) {
+        scrollToMessage();
+        return;
+    }
+    
+    // Handle filter routes
+    const validFilters = ['all', 'pinned', 'latest'];
+    if (validFilters.includes(hash)) {
+        currentFilter = hash;
+        // Update active button
+        document.querySelectorAll('.filter-button').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.filter === hash) {
+                btn.classList.add('active');
+            }
+        });
+        if (currentData.length) displayMessages(currentData);
+    }
+}
+
 // Improved scroll function with reply expansion
 function scrollToMessage() {
     const hash = window.location.hash.substring(1);
     if (!hash) return;
+
+    // If hash is a filter, not a message ID
+    if (['all', 'pinned', 'latest'].includes(hash)) return;
 
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
@@ -126,7 +154,7 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     // Add click handler to copy message link
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-        const messageUrl = `${window.location.href.split('#')[0]}#${rowNumber}`;
+        const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber}`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             // Visual feedback
             const originalText = messageNumberBadge.textContent;
@@ -254,7 +282,7 @@ function displayMessages(data) {
     chatContainer.innerHTML = '';
     
     const filteredData = filterMessages(data);
-    const replyMap = groupReplies(filteredData);
+    const replyMap = groupReplies(data); // Use full data for reply mapping
     const pinnedCount = data.filter(entry => entry.tag?.includes('📌')).length;
 
     // Update pinned button
@@ -263,58 +291,60 @@ function displayMessages(data) {
         pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
     }
 
-    // Create all top-level messages first
+    // Create all messages based on current filter
     filteredData.forEach((entry) => {
         const isReply = extractMessageIdFromText(entry.message);
-        if (isReply) return; // Skip replies in first pass
         
-        const hasReplies = replyMap[entry.rowNumber]?.length > 0;
-        
-        // Create message container
-        const messageElement = createMessageElement(entry, entry.rowNumber, replyMap);
-        
-        if (hasReplies) {
-            // Create thread container
-            const threadContainer = document.createElement('div');
-            threadContainer.className = 'thread-container';
+        // For pinned filter, we want to show all pinned messages including replies
+        if (currentFilter === 'pinned' || !isReply) {
+            const hasReplies = replyMap[entry.rowNumber]?.length > 0;
             
-            // Add message and replies container
-            threadContainer.appendChild(messageElement);
+            // Create message container
+            const messageElement = createMessageElement(entry, entry.rowNumber, replyMap, isReply);
             
-            const repliesContainer = document.createElement('div');
-            repliesContainer.className = 'thread collapsed';
-            
-            // Process replies
-            replyMap[entry.rowNumber].forEach(replyRowNumber => {
-                const replyEntry = data.find(e => e.rowNumber === replyRowNumber);
-                if (replyEntry) {
-                    const replyElement = createMessageElement(replyEntry, replyEntry.rowNumber, replyMap, true);
-                    repliesContainer.appendChild(replyElement);
-                    
-                    // Handle nested replies
-                    if (replyMap[replyEntry.rowNumber]?.length) {
-                        const nestedRepliesContainer = document.createElement('div');
-                        nestedRepliesContainer.className = 'thread collapsed';
+            if (hasReplies) {
+                // Create thread container
+                const threadContainer = document.createElement('div');
+                threadContainer.className = 'thread-container';
+                
+                // Add message and replies container
+                threadContainer.appendChild(messageElement);
+                
+                const repliesContainer = document.createElement('div');
+                repliesContainer.className = 'thread collapsed';
+                
+                // Process replies
+                replyMap[entry.rowNumber].forEach(replyRowNumber => {
+                    const replyEntry = data.find(e => e.rowNumber === replyRowNumber);
+                    if (replyEntry) {
+                        const replyElement = createMessageElement(replyEntry, replyRowNumber, replyMap, true);
+                        repliesContainer.appendChild(replyElement);
                         
-                        replyMap[replyEntry.rowNumber].forEach(nestedReplyRowNumber => {
-                            const nestedEntry = data.find(e => e.rowNumber === nestedReplyRowNumber);
-                            if (nestedEntry) {
-                                nestedRepliesContainer.appendChild(
-                                    createMessageElement(nestedEntry, nestedEntry.rowNumber, replyMap, true)
-                                );
-                            }
-                        });
-                        
-                        repliesContainer.appendChild(nestedRepliesContainer);
+                        // Handle nested replies
+                        if (replyMap[replyRowNumber]?.length) {
+                            const nestedRepliesContainer = document.createElement('div');
+                            nestedRepliesContainer.className = 'thread collapsed';
+                            
+                            replyMap[replyRowNumber].forEach(nestedReplyRowNumber => {
+                                const nestedEntry = data.find(e => e.rowNumber === nestedReplyRowNumber);
+                                if (nestedEntry) {
+                                    nestedRepliesContainer.appendChild(
+                                        createMessageElement(nestedEntry, nestedReplyRowNumber, replyMap, true)
+                                    );
+                                }
+                            });
+                            
+                            repliesContainer.appendChild(nestedRepliesContainer);
+                        }
                     }
-                }
-            });
-            
-            threadContainer.appendChild(repliesContainer);
-            chatContainer.appendChild(threadContainer);
-        } else {
-            // No replies, just add the message
-            chatContainer.appendChild(messageElement);
+                });
+                
+                threadContainer.appendChild(repliesContainer);
+                chatContainer.appendChild(threadContainer);
+            } else {
+                // No replies, just add the message
+                chatContainer.appendChild(messageElement);
+            }
         }
     });
 
@@ -346,6 +376,10 @@ document.getElementById('loadMessagesBtn').addEventListener('click', function() 
     this.style.display = 'none';
     isPollingActive = true;
     document.getElementById('filterButtons').classList.remove('hidden');
+    
+    // Check URL hash for initial filter
+    handleHashRouting();
+    
     fetchDataAndUpdate();
     pollingInterval = setInterval(() => {
         if (isPollingActive) {
@@ -362,6 +396,10 @@ document.querySelectorAll('.filter-button').forEach(button => {
         });
         this.classList.add('active');
         currentFilter = this.dataset.filter;
+        
+        // Update URL hash
+        window.location.hash = currentFilter;
+        
         displayMessages(currentData);
     });
 });
@@ -412,6 +450,7 @@ document.getElementById('toggleCloudButton').addEventListener('click', () => {
 });
 
 // Event Listeners
+window.addEventListener('hashchange', handleHashRouting);
 window.addEventListener('hashchange', scrollToMessage);
 
 document.getElementById('scrollToBottomButton').addEventListener('click', () => {
@@ -429,7 +468,6 @@ async function shareChatBubble(chatWrapper, messageId) {
         return;
     }
 
-
     const canvas = await html2canvas(chatWrapper, { backgroundColor: '#e4e0d7' });
     const imgData = canvas.toDataURL("image/png");
     shareButton.style.display = 'block';
@@ -437,9 +475,14 @@ async function shareChatBubble(chatWrapper, messageId) {
     const urlWithoutHash = window.location.href.split('#')[0];
     const fullMessageText = chatWrapper.querySelector('.message').textContent;
     const snippetLength = 100;
-    const snippetText = fullMessageText.length > snippetLength ? fullMessageText.substring(0, snippetLength) + '...' : fullMessageText;
+    const snippetText = fullMessageText.length > snippetLength ? 
+        fullMessageText.substring(0, snippetLength) + '...' : 
+        fullMessageText;
+    
+    // Use your previous share text format
     const shareText = `${snippetText} —  ممكن تكتب رد هنا!\n`;
-
+    
+    // Use your previous Twitter share link format
     const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
 
     const downloadButton = document.createElement('button');
@@ -456,16 +499,46 @@ async function shareChatBubble(chatWrapper, messageId) {
     twitterButton.className = 'emoji-button';
     twitterButton.innerHTML = '🐦';
     twitterButton.addEventListener('click', () => {
+        // Use your previous Twitter sharing method
         const link = document.createElement('a');
         link.href = shareLink;
         link.target = '_blank';
         link.click();
     });
 
+    const copyLinkButton = document.createElement('button');
+    copyLinkButton.className = 'emoji-button';
+    copyLinkButton.innerHTML = '🔗';
+    copyLinkButton.addEventListener('click', () => {
+        const messageUrl = `${urlWithoutHash}#${messageId}`;
+        navigator.clipboard.writeText(messageUrl).then(() => {
+            copyLinkButton.innerHTML = '✓';
+            setTimeout(() => copyLinkButton.innerHTML = '🔗', 2000);
+        });
+    });
+
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'share-options';
     optionsContainer.appendChild(downloadButton);
     optionsContainer.appendChild(twitterButton);
+    optionsContainer.appendChild(copyLinkButton);
 
     chatWrapper.appendChild(optionsContainer);
+
+    // Close options when clicking outside
+    setTimeout(() => {
+        const clickHandler = (e) => {
+            if (!chatWrapper.contains(e.target) && e.target !== shareButton) {
+                chatWrapper.removeChild(optionsContainer);
+                shareButton.style.display = 'block';
+                document.removeEventListener('click', clickHandler);
+            }
+        };
+        document.addEventListener('click', clickHandler);
+    }, 0);
 }
+    
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    handleHashRouting();
+});
