@@ -224,13 +224,16 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     }
 
     // Add reply toggle if this message has replies
+if (replyMap[rowNumber]?.length) {
+    const replyIndicator = document.createElement('div'); // <-- This was missing!
     replyIndicator.className = 'reply-indicator';
-replyIndicator.innerHTML = `
-  <span class="reply-badge">
-    💬 ${replyMap[rowNumber].length} ${replyMap[rowNumber].length === 1 ? 'Reply' : 'Replies'} 
-    <span class="reply-toggle">▼</span>
-  </span>
-`;
+    replyIndicator.innerHTML = `
+      <span class="reply-badge">
+        💬 ${replyMap[rowNumber].length} ${replyMap[rowNumber].length === 1 ? 'Reply' : 'Replies'} 
+        <span class="reply-toggle">▼</span>
+      </span>
+    `;
+    
        replyIndicator.addEventListener('click', (e) => {
   e.stopPropagation();
   const repliesContainer = chatWrapper.nextElementSibling;
