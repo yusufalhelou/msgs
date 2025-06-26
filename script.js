@@ -1,5 +1,11 @@
 // Base64 Image Converter (Run once on load)
 let base64Signature; // Global variable to store the result
+let isFetching = false;
+let currentData = [];
+let isPollingActive = false;
+let pollingInterval = null;
+let currentFilter = 'all';
+let heartCounts = {}; // Stores messageId -> heart count
 
 async function prepareSignature() {
     const imgUrl = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
@@ -19,11 +25,74 @@ async function prepareSignature() {
 // Initialize when page loads
 prepareSignature();
 
-let isFetching = false;
-let currentData = [];
-let isPollingActive = false;
-let pollingInterval = null;
-let currentFilter = 'all';
+// Heart Reaction Functions
+async function sendHeartReaction(messageId) {
+    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
+    const formData = new URLSearchParams();
+    formData.append('entry.253874205', messageId);
+    
+    try {
+        await fetch(formUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        });
+        localStorage.setItem(`hearted_${messageId}`, 'true');
+        updateHeartCount(messageId, 1);
+    } catch (error) {
+        console.log("Heart recorded offline");
+        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
+        pending.push(messageId);
+        localStorage.setItem('pendingHearts', JSON.stringify(pending));
+    }
+}
+
+async function fetchHeartCounts() {
+    try {
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT9a5FlbDqbZqNA9ARYSFP6Rqcp3PWJ_Ti0Zzt0bAUt1fsj4NR0bXGAH-sYCgqidJjP7QG2vj_gRhrU/pubhtml';
+        const response = await fetch(`${sheetUrl}?t=${Date.now()}`);
+        const html = await response.text();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const rows = doc.querySelectorAll('table tr');
+        
+        const counts = {};
+        Array.from(rows).slice(1).forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length > 1) {
+                const messageId = cells[1].textContent.trim();
+                counts[messageId] = (counts[messageId] || 0) + 1;
+            }
+        });
+        
+        heartCounts = counts;
+        updateAllHeartButtons();
+    } catch (error) {
+        console.error('Error fetching heart counts:', error);
+    }
+}
+
+function updateAllHeartButtons() {
+    document.querySelectorAll('.heart-button').forEach(button => {
+        const messageId = button.closest('.chat-wrapper').id.replace('message-', '');
+        const count = heartCounts[messageId] || 0;
+        const hasHearted = localStorage.getItem(`hearted_${messageId}`);
+        button.innerHTML = `❤️ ${count + (hasHearted ? 1 : 0)}`;
+    });
+}
+
+function updateHeartCount(messageId, increment = 0) {
+    heartCounts[messageId] = (heartCounts[messageId] || 0) + increment;
+    const button = document.querySelector(`#message-${messageId} .heart-button`);
+    if (button) {
+        const hasHearted = localStorage.getItem(`hearted_${messageId}`);
+        button.innerHTML = `❤️ ${heartCounts[messageId] + (hasHearted ? 1 : 0)}`;
+    }
+}
 
 // Handle hash-based routing
 function handleHashRouting() {
@@ -97,7 +166,7 @@ function parseHtml(html) {
     return Array.from(rows).slice(1).map((row, index) => {
         const cells = row.querySelectorAll('td');
         return {
-            rowNumber: index + 2, // +2 because: +1 for header row, +1 for slice(1)
+            rowNumber: index + 1, // +1 because: +1 for header row
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
             signature: cells[2]?.innerText.trim() || '',
@@ -137,40 +206,6 @@ function filterMessages(data) {
     }
 }
 
-// Heart Reaction Function
-async function sendHeartReaction(messageId) {
-    if (localStorage.getItem(`hearted_${messageId}`)) return;
-    
-    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
-    const formData = new URLSearchParams();
-    formData.append('entry.253874205', messageId);
-    
-    try {
-        await fetch(formUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData
-        });
-        localStorage.setItem(`hearted_${messageId}`, 'true');
-    } catch (error) {
-        console.log("Heart recorded offline");
-        // Queue for later submission if offline
-        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
-        pending.push(messageId);
-        localStorage.setItem('pendingHearts', JSON.stringify(pending));
-    }
-}
-
-// Process pending hearts when back online
-window.addEventListener('online', () => {
-    const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
-    pending.forEach(msgId => sendHeartReaction(msgId));
-    localStorage.removeItem('pendingHearts');
-});
-
 function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatWrapper = document.createElement('div');
     chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
@@ -185,10 +220,12 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     messageNumberBadge.textContent = `#${rowNumber}`;
     messageNumberBadge.title = "Click to copy message link";
     
+    // Add click handler to copy message link
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-        const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber}`;
+        const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber} \n`; // ← Space added
         navigator.clipboard.writeText(messageUrl).then(() => {
+            // Visual feedback
             const originalText = messageNumberBadge.textContent;
             messageNumberBadge.textContent = "Copied!";
             messageNumberBadge.classList.add('copied');
@@ -197,11 +234,13 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
                 messageNumberBadge.textContent = originalText;
                 messageNumberBadge.classList.remove('copied');
             }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
         });
     });
 
     chatBubble.appendChild(messageNumberBadge);
-
+    
     // Pin indicator
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
@@ -296,17 +335,20 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     // Heart button
     const heartButton = document.createElement('button');
     heartButton.className = 'heart-button';
-    heartButton.innerHTML = localStorage.getItem(`hearted_${rowNumber}`) ? '❤️ 1' : '❤️ 0';
+    heartButton.innerHTML = `❤️ ${heartCounts[rowNumber] || 0}`;
     
-    heartButton.addEventListener('click', () => {
+    heartButton.addEventListener('click', async () => {
         if (localStorage.getItem(`hearted_${rowNumber}`)) return;
         
         // Optimistic UI update
-        heartButton.innerHTML = '❤️ 1';
+        heartButton.innerHTML = `❤️ ${(heartCounts[rowNumber] || 0) + 1}`;
         heartButton.classList.add('heart-animate');
         
         // Send to Google Sheets
-        sendHeartReaction(rowNumber);
+        await sendHeartReaction(rowNumber);
+        
+        // Refresh counts
+        await fetchHeartCounts();
         
         setTimeout(() => {
             heartButton.classList.remove('heart-animate');
@@ -411,6 +453,9 @@ async function fetchDataAndUpdate() {
             currentData = newData;
             displayMessages(newData);
         }
+        
+        // Fetch heart counts with each update
+        await fetchHeartCounts();
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
@@ -504,27 +549,6 @@ document.getElementById('scrollToBottomButton').addEventListener('click', () => 
     document.getElementById('bottom-of-page').scrollIntoView({ behavior: 'smooth' });
 });
 
-// Add heart button near share button
-    const heartButton = document.createElement('button');
-    heartButton.className = 'heart-button';
-    heartButton.innerHTML = '❤️ 0';
-    
-    heartButton.addEventListener('click', () => {
-        // Optimistic UI update
-        const currentCount = parseInt(heartButton.textContent.match(/\d+/)[0]);
-        heartButton.innerHTML = `❤️ ${currentCount + 1}`;
-        heartButton.classList.add('heart-animate');
-        
-        // Send to Google Sheets
-        sendHeartReaction(rowNumber);
-        
-        setTimeout(() => {
-            heartButton.classList.remove('heart-animate');
-        }, 1000);
-    });
-    
-    chatWrapper.appendChild(heartButton);
-
 async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';
@@ -542,16 +566,9 @@ async function shareChatBubble(chatWrapper, messageId) {
 
     const urlWithoutHash = window.location.href.split('#')[0];
     const fullMessageText = chatWrapper.querySelector('.message').textContent;
-    const snippetLength = 100;
-    const snippetText = fullMessageText.length > snippetLength ? 
-        fullMessageText.substring(0, snippetLength) + '...' : 
-        fullMessageText;
-    
-    // Use your previous share text format
-    const shareText = `${snippetText} —  ممكن تكتب رد هنا!\n`;
-    
-    // Use your previous Twitter share link format
-    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
+    const snippetText = fullMessageText.length > 100 ? 
+        fullMessageText.substring(0, 100) + '...' : fullMessageText;
+    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(snippetText + ' — ممكن تكتب رد هنا!\n')}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
 
     const downloadButton = document.createElement('button');
     downloadButton.className = 'emoji-button';
@@ -567,7 +584,6 @@ async function shareChatBubble(chatWrapper, messageId) {
     twitterButton.className = 'emoji-button';
     twitterButton.innerHTML = '🐦';
     twitterButton.addEventListener('click', () => {
-        // Use your previous Twitter sharing method
         const link = document.createElement('a');
         link.href = shareLink;
         link.target = '_blank';
@@ -578,13 +594,13 @@ async function shareChatBubble(chatWrapper, messageId) {
     copyLinkButton.className = 'emoji-button';
     copyLinkButton.innerHTML = '🔗';
     copyLinkButton.addEventListener('click', () => {
-    const messageUrl = `${urlWithoutHash}#${messageId} \n`; // ← Space added here
+        const messageUrl = `${urlWithoutHash}#${messageId} \n`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             copyLinkButton.innerHTML = '✓';
             setTimeout(() => copyLinkButton.innerHTML = '🔗', 2000);
         });
     });
-
+    
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'share-options';
     optionsContainer.appendChild(downloadButton);
@@ -593,7 +609,6 @@ async function shareChatBubble(chatWrapper, messageId) {
 
     chatWrapper.appendChild(optionsContainer);
 
-    // Close options when clicking outside
     setTimeout(() => {
         const clickHandler = (e) => {
             if (!chatWrapper.contains(e.target) && e.target !== shareButton) {
@@ -604,12 +619,11 @@ async function shareChatBubble(chatWrapper, messageId) {
         };
         document.addEventListener('click', clickHandler);
     }, 0);
-
-    if (localStorage.getItem(`hearted_${messageId}`)) return;
-localStorage.setItem(`hearted_${messageId}`, 'true');
 }
-    
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     handleHashRouting();
+    fetchHeartCounts(); // Load initial heart counts
+    setInterval(fetchHeartCounts, 300000); // Update hearts every 5 minutes
 });
