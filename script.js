@@ -32,20 +32,26 @@ function scrollToMessage() {
 
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
-        // Expand replies when jumping to a message
-        const repliesContainer = messageElement.nextElementSibling;
-        if (repliesContainer && repliesContainer.classList.contains('thread')) {
-            repliesContainer.classList.remove('collapsed');
-            const toggle = messageElement.querySelector('.reply-toggle');
-            if (toggle) toggle.textContent = '▲';
+        // Expand all parent threads when jumping to a message
+        let currentElement = messageElement.parentElement;
+        while (currentElement && currentElement.classList.contains('thread')) {
+            currentElement.classList.remove('collapsed');
+            const parentMessage = currentElement.previousElementSibling;
+            if (parentMessage) {
+                const toggle = parentMessage.querySelector('.reply-toggle');
+                if (toggle) toggle.textContent = '▲';
+            }
+            currentElement = currentElement.parentElement;
         }
 
         messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        messageElement.classList.add('highlight');
-        
-        setTimeout(() => {
-            messageElement.classList.remove('highlight');
-        }, 2000);
+        const chatBubble = messageElement.querySelector('.chat-bubble');
+        if (chatBubble) {
+            chatBubble.classList.add('highlight');
+            setTimeout(() => {
+                chatBubble.classList.remove('highlight');
+            }, 2000);
+        }
     }
 }
 
@@ -60,9 +66,10 @@ function parseHtml(html) {
     const doc = parser.parseFromString(html, 'text/html');
     const rows = doc.querySelectorAll('table tr');
     
-    return Array.from(rows).slice(1).map(row => {
+    return Array.from(rows).slice(1).map((row, index) => {
         const cells = row.querySelectorAll('td');
         return {
+            rowNumber: index + 2, // +2 because: +1 for header row, +1 for slice(1)
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
             signature: cells[2]?.innerText.trim() || '',
@@ -83,11 +90,11 @@ function extractMessageIdFromText(text) {
 
 function groupReplies(messages) {
     const replyMap = {};
-    messages.forEach((msg, index) => {
+    messages.forEach((msg) => {
         const replyToId = extractMessageIdFromText(msg.message);
         if (replyToId) {
             if (!replyMap[replyToId]) replyMap[replyToId] = [];
-            replyMap[replyToId].push(index);
+            replyMap[replyToId].push(msg.rowNumber);
         }
     });
     return replyMap;
@@ -102,11 +109,10 @@ function filterMessages(data) {
     }
 }
 
-function createMessageElement(entry, index, replyMap, isReply = false) {
-    const messageId = entry.rowNumber; // Use the actual row number instead of array index
+function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatWrapper = document.createElement('div');
     chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
-    chatWrapper.id = `message-${messageId}`;
+    chatWrapper.id = `message-${rowNumber}`;
 
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
@@ -114,22 +120,22 @@ function createMessageElement(entry, index, replyMap, isReply = false) {
     // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
-    messageNumberBadge.textContent = `#${messageId}`;
+    messageNumberBadge.textContent = `#${rowNumber}`;
     messageNumberBadge.title = "Click to copy message link";
     
     // Add click handler to copy message link
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-    const messageUrl = `${window.location.href.split('#')[0]}#${messageId}`;
+        const messageUrl = `${window.location.href.split('#')[0]}#${rowNumber}`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             // Visual feedback
             const originalText = messageNumberBadge.textContent;
             messageNumberBadge.textContent = "Copied!";
-            messageNumberBadge.style.backgroundColor = '#4CAF50'; // Green color
+            messageNumberBadge.classList.add('copied');
             
             setTimeout(() => {
                 messageNumberBadge.textContent = originalText;
-                messageNumberBadge.style.backgroundColor = isReply ? '#213d53' : '#6B313F';
+                messageNumberBadge.classList.remove('copied');
             }, 2000);
         }).catch(err => {
             console.error('Failed to copy: ', err);
@@ -190,13 +196,13 @@ function createMessageElement(entry, index, replyMap, isReply = false) {
     }
 
     // Add reply toggle if this message has replies
-    if (replyMap[messageId]?.length) {
+    if (replyMap[rowNumber]?.length) {
         const replyIndicator = document.createElement('div');
         replyIndicator.className = 'reply-indicator';
         
         const replyBadge = document.createElement('span');
         replyBadge.className = 'reply-badge';
-        replyBadge.textContent = `${replyMap[messageId].length} ${replyMap[messageId].length === 1 ? 'reply' : 'replies'}`;
+        replyBadge.textContent = `💬 ${replyMap[rowNumber].length} ${replyMap[rowNumber].length === 1 ? 'Reply' : 'Replies'}`;
         
         const replyToggle = document.createElement('span');
         replyToggle.className = 'reply-toggle';
@@ -208,7 +214,7 @@ function createMessageElement(entry, index, replyMap, isReply = false) {
         replyIndicator.addEventListener('click', (e) => {
             e.stopPropagation();
             const repliesContainer = chatWrapper.nextElementSibling;
-            if (repliesContainer) {
+            if (repliesContainer && repliesContainer.classList.contains('thread')) {
                 repliesContainer.classList.toggle('collapsed');
                 replyToggle.textContent = repliesContainer.classList.contains('collapsed') ? '▼' : '▲';
             }
@@ -231,7 +237,7 @@ function createMessageElement(entry, index, replyMap, isReply = false) {
     const shareButton = document.createElement('button');
     shareButton.className = 'share-button';
     shareButton.innerHTML = '🔗';
-    shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, messageId));
+    shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, rowNumber));
 
     // Assemble message
     chatBubble.appendChild(chatTimestamp);
@@ -257,53 +263,59 @@ function displayMessages(data) {
         pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
     }
 
-    // Create all top-level messages (those without replies or not being replies)
-    filteredData.forEach((entry, index) => {
+    // Create all top-level messages first
+    filteredData.forEach((entry) => {
         const isReply = extractMessageIdFromText(entry.message);
-        const hasReplies = replyMap[index + 1]?.length > 0;
+        if (isReply) return; // Skip replies in first pass
         
-        // Skip replies in the first pass (they'll be added in the nesting phase)
-        if (isReply && !hasReplies) return;
+        const hasReplies = replyMap[entry.rowNumber]?.length > 0;
         
-        const messageId = index + 1;
-        const threadContainer = document.createElement('div');
-        if (hasReplies) threadContainer.className = 'thread';
+        // Create message container
+        const messageElement = createMessageElement(entry, entry.rowNumber, replyMap);
         
-const messageElement = createMessageElement(entry, entry.rowNumber, replyMap);
-        threadContainer.appendChild(messageElement);
-        
-        // Add replies if they exist
         if (hasReplies) {
-            const repliesContainer = document.createElement('div');
-            repliesContainer.className = 'thread';
+            // Create thread container
+            const threadContainer = document.createElement('div');
+            threadContainer.className = 'thread-container';
             
-            replyMap[index + 1].forEach(replyIndex => {
-                const replyEntry = filteredData[replyIndex];
-                const replyId = replyIndex + 1;
-                const replyElement = createMessageElement(replyEntry, replyId, replyMap, true);
-                repliesContainer.appendChild(replyElement);
-                
-                // Recursively add nested replies
-                if (replyMap[replyId]?.length) {
-                    const nestedRepliesContainer = document.createElement('div');
-                    nestedRepliesContainer.className = 'thread';
+            // Add message and replies container
+            threadContainer.appendChild(messageElement);
+            
+            const repliesContainer = document.createElement('div');
+            repliesContainer.className = 'thread collapsed';
+            
+            // Process replies
+            replyMap[entry.rowNumber].forEach(replyRowNumber => {
+                const replyEntry = data.find(e => e.rowNumber === replyRowNumber);
+                if (replyEntry) {
+                    const replyElement = createMessageElement(replyEntry, replyEntry.rowNumber, replyMap, true);
+                    repliesContainer.appendChild(replyElement);
                     
-                    replyMap[replyId].forEach(nestedReplyIndex => {
-                        const nestedEntry = filteredData[nestedReplyIndex];
-                        const nestedId = nestedReplyIndex + 1;
-                        nestedRepliesContainer.appendChild(
-                            createMessageElement(nestedEntry, nestedId, replyMap, true)
-                        );
-                    });
-                    
-                    repliesContainer.appendChild(nestedRepliesContainer);
+                    // Handle nested replies
+                    if (replyMap[replyEntry.rowNumber]?.length) {
+                        const nestedRepliesContainer = document.createElement('div');
+                        nestedRepliesContainer.className = 'thread collapsed';
+                        
+                        replyMap[replyEntry.rowNumber].forEach(nestedReplyRowNumber => {
+                            const nestedEntry = data.find(e => e.rowNumber === nestedReplyRowNumber);
+                            if (nestedEntry) {
+                                nestedRepliesContainer.appendChild(
+                                    createMessageElement(nestedEntry, nestedEntry.rowNumber, replyMap, true)
+                                );
+                            }
+                        });
+                        
+                        repliesContainer.appendChild(nestedRepliesContainer);
+                    }
                 }
             });
             
             threadContainer.appendChild(repliesContainer);
+            chatContainer.appendChild(threadContainer);
+        } else {
+            // No replies, just add the message
+            chatContainer.appendChild(messageElement);
         }
-        
-        chatContainer.appendChild(threadContainer);
     });
 
     scrollToMessage();
