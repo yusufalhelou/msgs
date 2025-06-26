@@ -54,7 +54,7 @@ async function sendHeartReaction(messageId) {
         
     } catch (error) {
         console.error('Heart submission failed:', error);
-        const pending = JSON.parse(localStorage.getItem('pendingHearts') || [];
+const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
         pending.push(messageId.toString());
         localStorage.setItem('pendingHearts', JSON.stringify(pending));
         
