@@ -510,7 +510,7 @@ async function shareChatBubble(chatWrapper, messageId) {
     copyLinkButton.className = 'emoji-button';
     copyLinkButton.innerHTML = '🔗';
     copyLinkButton.addEventListener('click', () => {
-        const messageUrl = `${urlWithoutHash}#${messageId}`;
+    const messageUrl = `${urlWithoutHash}#${messageId} `; // ← Space added here
         navigator.clipboard.writeText(messageUrl).then(() => {
             copyLinkButton.innerHTML = '✓';
             setTimeout(() => copyLinkButton.innerHTML = '🔗', 2000);
