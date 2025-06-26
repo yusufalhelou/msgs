@@ -1,5 +1,11 @@
 // Base64 Image Converter (Run once on load)
 let base64Signature; // Global variable to store the result
+let isFetching = false;
+let currentData = [];
+let isPollingActive = false;
+let pollingInterval = null;
+let currentFilter = 'all';
+let heartCounts = {}; // Stores messageId -> heart count
 
 async function prepareSignature() {
     const imgUrl = 'https://raw.githubusercontent.com/51PharmD/msgs/refs/heads/main/YusufAlhelou.png';
@@ -19,27 +25,87 @@ async function prepareSignature() {
 // Initialize when page loads
 prepareSignature();
 
-let isFetching = false;
-let currentData = [];
-let isPollingActive = false;
-let pollingInterval = null;
-let currentFilter = 'all';
+// Heart Reaction Functions
+async function sendHeartReaction(messageId) {
+    if (localStorage.getItem(`hearted_${messageId}`)) return;
+    
+    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
+    const formData = new URLSearchParams();
+    formData.append('entry.253874205', messageId);
+    
+    try {
+        await fetch(formUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        });
+        localStorage.setItem(`hearted_${messageId}`, 'true');
+        updateHeartCount(messageId, 1);
+    } catch (error) {
+        console.log("Heart recorded offline");
+        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
+        pending.push(messageId);
+        localStorage.setItem('pendingHearts', JSON.stringify(pending));
+    }
+}
+
+async function fetchHeartCounts() {
+    try {
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQazrkD8DxsLDMhQ4X78vjlIjq1wos7C-0dge7NDG0EBkJ7jhePsJYXCGUvMV79GaNcAa1hJYS_M-5Z/pub?output=csv';
+        const response = await fetch(`${sheetUrl}?t=${Date.now()}`);
+        const csvData = await response.text();
+        
+        const rows = csvData.split('\n').slice(1);
+        const counts = {};
+        
+        rows.forEach(row => {
+            const columns = row.split(',');
+            if (columns.length >= 2) {
+                const messageId = columns[1].trim();
+                counts[messageId] = (counts[messageId] || 0) + 1;
+            }
+        });
+        
+        heartCounts = counts;
+        updateAllHeartButtons();
+    } catch (error) {
+        console.error('Error fetching heart counts:', error);
+    }
+}
+
+function updateAllHeartButtons() {
+    document.querySelectorAll('.heart-button').forEach(button => {
+        const messageId = button.closest('.chat-wrapper').id.replace('message-', '');
+        const count = heartCounts[messageId] || 0;
+        const hasHearted = localStorage.getItem(`hearted_${messageId}`);
+        button.innerHTML = `❤️ ${count + (hasHearted ? 1 : 0)}`;
+    });
+}
+
+function updateHeartCount(messageId, increment = 0) {
+    heartCounts[messageId] = (heartCounts[messageId] || 0) + increment;
+    const button = document.querySelector(`#message-${messageId} .heart-button`);
+    if (button) {
+        const hasHearted = localStorage.getItem(`hearted_${messageId}`);
+        button.innerHTML = `❤️ ${heartCounts[messageId] + (hasHearted ? 1 : 0)}`;
+    }
+}
 
 // Handle hash-based routing
 function handleHashRouting() {
     const hash = window.location.hash.substring(1);
     
-    // Check if hash is a message ID (numbers only)
     if (/^\d+$/.test(hash)) {
         scrollToMessage();
         return;
     }
     
-    // Handle filter routes
     const validFilters = ['all', 'pinned', 'latest'];
     if (validFilters.includes(hash)) {
         currentFilter = hash;
-        // Update active button
         document.querySelectorAll('.filter-button').forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.filter === hash) {
@@ -50,17 +116,14 @@ function handleHashRouting() {
     }
 }
 
-// Improved scroll function with reply expansion
 function scrollToMessage() {
     const hash = window.location.hash.substring(1);
     if (!hash) return;
 
-    // If hash is a filter, not a message ID
     if (['all', 'pinned', 'latest'].includes(hash)) return;
 
     const messageElement = document.getElementById(`message-${hash}`);
     if (messageElement) {
-        // Expand all parent threads when jumping to a message
         let currentElement = messageElement.parentElement;
         while (currentElement && currentElement.classList.contains('thread')) {
             currentElement.classList.remove('collapsed');
@@ -97,7 +160,7 @@ function parseHtml(html) {
     return Array.from(rows).slice(1).map((row, index) => {
         const cells = row.querySelectorAll('td');
         return {
-            rowNumber: index + 2, // +2 because: +1 for header row, +1 for slice(1)
+            rowNumber: index + 1,
             timestamp: cells[0]?.innerText.trim() || '',
             message: cells[1]?.innerText.trim() || '',
             signature: cells[2]?.innerText.trim() || '',
@@ -137,40 +200,6 @@ function filterMessages(data) {
     }
 }
 
-// Heart Reaction Function
-async function sendHeartReaction(messageId) {
-    if (localStorage.getItem(`hearted_${messageId}`)) return;
-    
-    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
-    const formData = new URLSearchParams();
-    formData.append('entry.253874205', messageId);
-    
-    try {
-        await fetch(formUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData
-        });
-        localStorage.setItem(`hearted_${messageId}`, 'true');
-    } catch (error) {
-        console.log("Heart recorded offline");
-        // Queue for later submission if offline
-        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
-        pending.push(messageId);
-        localStorage.setItem('pendingHearts', JSON.stringify(pending));
-    }
-}
-
-// Process pending hearts when back online
-window.addEventListener('online', () => {
-    const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
-    pending.forEach(msgId => sendHeartReaction(msgId));
-    localStorage.removeItem('pendingHearts');
-});
-
 function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatWrapper = document.createElement('div');
     chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
@@ -179,7 +208,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
 
-    // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
     messageNumberBadge.textContent = `#${rowNumber}`;
@@ -187,7 +215,7 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     
     messageNumberBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-        const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber}`;
+        const messageUrl = `${window.location.origin}${window.location.pathname}#${rowNumber} \n`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             const originalText = messageNumberBadge.textContent;
             messageNumberBadge.textContent = "Copied!";
@@ -201,8 +229,7 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     });
 
     chatBubble.appendChild(messageNumberBadge);
-
-    // Pin indicator
+    
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
         pin.className = 'pin-indicator';
@@ -210,7 +237,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
         chatBubble.appendChild(pin);
     }
 
-    // Message decorations
     const wire = document.createElement('div');
     wire.className = 'wire';
     chatBubble.appendChild(wire);
@@ -224,7 +250,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     }
     chatBubble.appendChild(lightsContainer);
 
-    // Message content
     const chatTimestamp = document.createElement('div');
     chatTimestamp.className = 'timestamp';
     chatTimestamp.textContent = entry.timestamp;
@@ -237,7 +262,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     chatSignature.className = 'signature';
     chatSignature.textContent = `- ${entry.signature}`;
 
-    // Add reply link if this is a reply
     const replyToId = extractMessageIdFromText(entry.message);
     if (replyToId) {
         const replyLink = document.createElement('a');
@@ -253,7 +277,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
         chatMessage.appendChild(replyLink);
     }
 
-    // Add reply toggle if this message has replies
     if (replyMap[rowNumber]?.length) {
         const replyIndicator = document.createElement('div');
         replyIndicator.className = 'reply-indicator';
@@ -263,7 +286,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
                 <span class="reply-toggle">▼</span>
             </span>
         `;
-        
         replyIndicator.addEventListener('click', (e) => {
             e.stopPropagation();
             const repliesContainer = chatWrapper.nextElementSibling;
@@ -273,11 +295,9 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
                 toggle.textContent = repliesContainer.classList.contains('collapsed') ? '▼' : '▲';
             }
         });
-        
         chatSignature.appendChild(replyIndicator);
     }
 
-    // Signature image
     if (entry.tag?.includes('⚡') && base64Signature) {
         const signatureImg = document.createElement('img');
         signatureImg.src = base64Signature;
@@ -287,25 +307,23 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
         chatBubble.appendChild(signatureImg);
     }
 
-    // Share button
     const shareButton = document.createElement('button');
     shareButton.className = 'share-button';
     shareButton.innerHTML = '🔗';
     shareButton.addEventListener('click', () => shareChatBubble(chatWrapper, rowNumber));
 
-    // Heart button
+    // Heart button implementation
     const heartButton = document.createElement('button');
     heartButton.className = 'heart-button';
-    heartButton.innerHTML = localStorage.getItem(`hearted_${rowNumber}`) ? '❤️ 1' : '❤️ 0';
+    const initialCount = heartCounts[rowNumber] || 0;
+    heartButton.innerHTML = `❤️ ${initialCount + (localStorage.getItem(`hearted_${rowNumber}`) ? 1 : 0)}`;
     
     heartButton.addEventListener('click', () => {
         if (localStorage.getItem(`hearted_${rowNumber}`)) return;
         
-        // Optimistic UI update
-        heartButton.innerHTML = '❤️ 1';
+        heartButton.innerHTML = `❤️ ${(heartCounts[rowNumber] || 0) + 1}`;
         heartButton.classList.add('heart-animate');
-        
-        // Send to Google Sheets
+        localStorage.setItem(`hearted_${rowNumber}`, 'true');
         sendHeartReaction(rowNumber);
         
         setTimeout(() => {
@@ -313,7 +331,6 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
         }, 1000);
     });
 
-    // Assemble message
     chatBubble.appendChild(chatTimestamp);
     chatBubble.appendChild(chatMessage);
     chatBubble.appendChild(chatSignature);
@@ -329,45 +346,35 @@ function displayMessages(data) {
     chatContainer.innerHTML = '';
     
     const filteredData = filterMessages(data);
-    const replyMap = groupReplies(data); // Use full data for reply mapping
+    const replyMap = groupReplies(data);
     const pinnedCount = data.filter(entry => entry.tag?.includes('📌')).length;
 
-    // Update pinned button
     const pinnedButton = document.querySelector('[data-filter="pinned"]');
     if (pinnedButton) {
         pinnedButton.textContent = pinnedCount > 0 ? `Pinned 📌 [${pinnedCount}]` : 'Pinned 📌';
     }
 
-    // Create all messages based on current filter
     filteredData.forEach((entry) => {
         const isReply = extractMessageIdFromText(entry.message);
         
-        // For pinned filter, we want to show all pinned messages including replies
         if (currentFilter === 'pinned' || !isReply) {
             const hasReplies = replyMap[entry.rowNumber]?.length > 0;
-            
-            // Create message container
             const messageElement = createMessageElement(entry, entry.rowNumber, replyMap, isReply);
             
             if (hasReplies) {
-                // Create thread container
                 const threadContainer = document.createElement('div');
                 threadContainer.className = 'thread-container';
-                
-                // Add message and replies container
                 threadContainer.appendChild(messageElement);
                 
                 const repliesContainer = document.createElement('div');
                 repliesContainer.className = 'thread collapsed';
                 
-                // Process replies
                 replyMap[entry.rowNumber].forEach(replyRowNumber => {
                     const replyEntry = data.find(e => e.rowNumber === replyRowNumber);
                     if (replyEntry) {
                         const replyElement = createMessageElement(replyEntry, replyRowNumber, replyMap, true);
                         repliesContainer.appendChild(replyElement);
                         
-                        // Handle nested replies
                         if (replyMap[replyRowNumber]?.length) {
                             const nestedRepliesContainer = document.createElement('div');
                             nestedRepliesContainer.className = 'thread collapsed';
@@ -380,16 +387,13 @@ function displayMessages(data) {
                                     );
                                 }
                             });
-                            
                             repliesContainer.appendChild(nestedRepliesContainer);
                         }
                     }
                 });
-                
                 threadContainer.appendChild(repliesContainer);
                 chatContainer.appendChild(threadContainer);
             } else {
-                // No replies, just add the message
                 chatContainer.appendChild(messageElement);
             }
         }
@@ -411,6 +415,8 @@ async function fetchDataAndUpdate() {
             currentData = newData;
             displayMessages(newData);
         }
+        
+        await fetchHeartCounts();
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
@@ -423,10 +429,7 @@ document.getElementById('loadMessagesBtn').addEventListener('click', function() 
     this.style.display = 'none';
     isPollingActive = true;
     document.getElementById('filterButtons').classList.remove('hidden');
-    
-    // Check URL hash for initial filter
     handleHashRouting();
-    
     fetchDataAndUpdate();
     pollingInterval = setInterval(() => {
         if (isPollingActive) {
@@ -443,10 +446,7 @@ document.querySelectorAll('.filter-button').forEach(button => {
         });
         this.classList.add('active');
         currentFilter = this.dataset.filter;
-        
-        // Update URL hash
         window.location.hash = currentFilter;
-        
         displayMessages(currentData);
     });
 });
@@ -504,27 +504,6 @@ document.getElementById('scrollToBottomButton').addEventListener('click', () => 
     document.getElementById('bottom-of-page').scrollIntoView({ behavior: 'smooth' });
 });
 
-// Add heart button near share button
-    const heartButton = document.createElement('button');
-    heartButton.className = 'heart-button';
-    heartButton.innerHTML = '❤️ 0';
-    
-    heartButton.addEventListener('click', () => {
-        // Optimistic UI update
-        const currentCount = parseInt(heartButton.textContent.match(/\d+/)[0]);
-        heartButton.innerHTML = `❤️ ${currentCount + 1}`;
-        heartButton.classList.add('heart-animate');
-        
-        // Send to Google Sheets
-        sendHeartReaction(rowNumber);
-        
-        setTimeout(() => {
-            heartButton.classList.remove('heart-animate');
-        }, 1000);
-    });
-    
-    chatWrapper.appendChild(heartButton);
-
 async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';
@@ -542,16 +521,9 @@ async function shareChatBubble(chatWrapper, messageId) {
 
     const urlWithoutHash = window.location.href.split('#')[0];
     const fullMessageText = chatWrapper.querySelector('.message').textContent;
-    const snippetLength = 100;
-    const snippetText = fullMessageText.length > snippetLength ? 
-        fullMessageText.substring(0, snippetLength) + '...' : 
-        fullMessageText;
-    
-    // Use your previous share text format
-    const shareText = `${snippetText} —  ممكن تكتب رد هنا!\n`;
-    
-    // Use your previous Twitter share link format
-    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
+    const snippetText = fullMessageText.length > 100 ? 
+        fullMessageText.substring(0, 100) + '...' : fullMessageText;
+    const shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(snippetText + ' — ممكن تكتب رد هنا!\n')}&url=${encodeURIComponent(urlWithoutHash + '#' + messageId)}`;
 
     const downloadButton = document.createElement('button');
     downloadButton.className = 'emoji-button';
@@ -567,7 +539,6 @@ async function shareChatBubble(chatWrapper, messageId) {
     twitterButton.className = 'emoji-button';
     twitterButton.innerHTML = '🐦';
     twitterButton.addEventListener('click', () => {
-        // Use your previous Twitter sharing method
         const link = document.createElement('a');
         link.href = shareLink;
         link.target = '_blank';
@@ -578,13 +549,13 @@ async function shareChatBubble(chatWrapper, messageId) {
     copyLinkButton.className = 'emoji-button';
     copyLinkButton.innerHTML = '🔗';
     copyLinkButton.addEventListener('click', () => {
-    const messageUrl = `${urlWithoutHash}#${messageId} \n`; // ← Space added here
+        const messageUrl = `${urlWithoutHash}#${messageId} \n`;
         navigator.clipboard.writeText(messageUrl).then(() => {
             copyLinkButton.innerHTML = '✓';
             setTimeout(() => copyLinkButton.innerHTML = '🔗', 2000);
         });
     });
-
+    
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'share-options';
     optionsContainer.appendChild(downloadButton);
@@ -593,7 +564,6 @@ async function shareChatBubble(chatWrapper, messageId) {
 
     chatWrapper.appendChild(optionsContainer);
 
-    // Close options when clicking outside
     setTimeout(() => {
         const clickHandler = (e) => {
             if (!chatWrapper.contains(e.target) && e.target !== shareButton) {
@@ -604,12 +574,11 @@ async function shareChatBubble(chatWrapper, messageId) {
         };
         document.addEventListener('click', clickHandler);
     }, 0);
-
-    if (localStorage.getItem(`hearted_${messageId}`)) return;
-localStorage.setItem(`hearted_${messageId}`, 'true');
 }
-    
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     handleHashRouting();
+    fetchHeartCounts();
+    setInterval(fetchHeartCounts, 300000); // Update hearts every 5 minutes
 });
