@@ -137,6 +137,27 @@ function filterMessages(data) {
     }
 }
 
+ // Hearts
+async function sendHeartReaction(messageId) {
+    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse'; // From step 2
+    const formData = new URLSearchParams();
+    
+    // These field names come from your form's input names
+    formData.append('entry.253874205', messageId); // Replace with your actual field ID
+    
+    try {
+        await fetch(formUrl, {
+            method: 'POST',
+            mode: 'no-cors', // Important for CORS
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        });
+    } catch (error) {
+        console.log("Heart recorded offline");
+    }
+
 function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatWrapper = document.createElement('div');
     chatWrapper.className = `chat-wrapper ${isReply ? 'reply' : ''}`;
@@ -145,6 +166,7 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
 
+    
     // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
@@ -171,7 +193,8 @@ function createMessageElement(entry, rowNumber, replyMap, isReply = false) {
     });
 
     chatBubble.appendChild(messageNumberBadge);
-    
+
+   
     // Pin indicator
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
@@ -453,6 +476,27 @@ document.getElementById('scrollToBottomButton').addEventListener('click', () => 
     document.getElementById('bottom-of-page').scrollIntoView({ behavior: 'smooth' });
 });
 
+// Add heart button near share button
+    const heartButton = document.createElement('button');
+    heartButton.className = 'heart-button';
+    heartButton.innerHTML = '❤️ 0';
+    
+    heartButton.addEventListener('click', () => {
+        // Optimistic UI update
+        const currentCount = parseInt(heartButton.textContent.match(/\d+/)[0]);
+        heartButton.innerHTML = `❤️ ${currentCount + 1}`;
+        heartButton.classList.add('heart-animate');
+        
+        // Send to Google Sheets
+        sendHeartReaction(rowNumber);
+        
+        setTimeout(() => {
+            heartButton.classList.remove('heart-animate');
+        }, 1000);
+    });
+    
+    chatWrapper.appendChild(heartButton);
+
 async function shareChatBubble(chatWrapper, messageId) {
     const shareButton = chatWrapper.querySelector('.share-button');
     shareButton.style.display = 'none';
@@ -532,6 +576,9 @@ async function shareChatBubble(chatWrapper, messageId) {
         };
         document.addEventListener('click', clickHandler);
     }, 0);
+
+    if (localStorage.getItem(`hearted_${messageId}`)) return;
+localStorage.setItem(`hearted_${messageId}`, 'true');
 }
     
 // Initialize on load
