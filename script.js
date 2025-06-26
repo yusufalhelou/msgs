@@ -110,10 +110,31 @@ function createMessageElement(entry, messageId, replyMap, isReply = false) {
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
 
- // Add message number badge
+    // Create clickable message number badge
     const messageNumberBadge = document.createElement('div');
     messageNumberBadge.className = 'message-number';
-    messageNumberBadge.textContent = `#${messageId}`;
+    messageNumberBadge.innerHTML = `#${messageId}`;
+    messageNumberBadge.title = "Click to copy message link";
+    
+    // Add click handler to copy message link
+    messageNumberBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const messageUrl = `${window.location.href.split('#')[0]}#${messageId}`;
+        navigator.clipboard.writeText(messageUrl).then(() => {
+            // Visual feedback
+            const originalText = messageNumberBadge.textContent;
+            messageNumberBadge.textContent = "Copied!";
+            messageNumberBadge.style.backgroundColor = '#4CAF50'; // Green color
+            
+            setTimeout(() => {
+                messageNumberBadge.textContent = originalText;
+                messageNumberBadge.style.backgroundColor = isReply ? '#213d53' : '#6B313F';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    });
+
     chatBubble.appendChild(messageNumberBadge);
     
     // Pin indicator
