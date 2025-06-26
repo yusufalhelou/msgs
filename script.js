@@ -27,14 +27,19 @@ prepareSignature();
 
 // Heart Reaction Functions
 async function sendHeartReaction(messageId) {
-    if (localStorage.getItem(`hearted_${messageId}`)) return;
+    if (localStorage.getItem(`hearted_${messageId}`)) {
+        console.log(`Already hearted message ${messageId}`);
+        return;
+    }
     
     const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSe6sC4_uMYiC510n0SHbJ2_rl88NfFM8TjjnZHZ6pUFSbwrfQ/formResponse';
     const formData = new URLSearchParams();
-    formData.append('entry.253874205', messageId);
+    formData.append('entry.253874205', messageId.toString()); // Ensure string
     
     try {
-        await fetch(formUrl, {
+        console.log('Attempting to send heart:', {messageId, formUrl, formData: Object.fromEntries(formData)});
+        
+        const response = await fetch(formUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -42,19 +47,26 @@ async function sendHeartReaction(messageId) {
             },
             body: formData
         });
+        
+        console.log('Heart submission successful (CORS prevents reading response)');
         localStorage.setItem(`hearted_${messageId}`, 'true');
         updateHeartCount(messageId, 1);
+        
     } catch (error) {
-        console.log("Heart recorded offline");
-        const pending = JSON.parse(localStorage.getItem('pendingHearts') || '[]');
-        pending.push(messageId);
+        console.error('Heart submission failed:', error);
+        const pending = JSON.parse(localStorage.getItem('pendingHearts') || [];
+        pending.push(messageId.toString());
         localStorage.setItem('pendingHearts', JSON.stringify(pending));
+        
+        // Visual feedback
+        const button = document.querySelector(`#message-${messageId} .heart-button`);
+        if (button) button.classList.add('heart-pending');
     }
 }
 
 async function fetchHeartCounts() {
     try {
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQazrkD8DxsLDMhQ4X78vjlIjq1wos7C-0dge7NDG0EBkJ7jhePsJYXCGUvMV79GaNcAa1hJYS_M-5Z/pub?output=csv';
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT9a5FlbDqbZqNA9ARYSFP6Rqcp3PWJ_Ti0Zzt0bAUt1fsj4NR0bXGAH-sYCgqidJjP7QG2vj_gRhrU/pubhtml';
         const response = await fetch(`${sheetUrl}?t=${Date.now()}`);
         const csvData = await response.text();
         
