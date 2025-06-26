@@ -110,6 +110,12 @@ function createMessageElement(entry, messageId, replyMap, isReply = false) {
     const chatBubble = document.createElement('div');
     chatBubble.className = 'chat-bubble';
 
+ // Add message number badge
+    const messageNumberBadge = document.createElement('div');
+    messageNumberBadge.className = 'message-number';
+    messageNumberBadge.textContent = `#${messageId}`;
+    chatBubble.appendChild(messageNumberBadge);
+    
     // Pin indicator
     if (entry.tag?.includes('📌')) {
         const pin = document.createElement('div');
